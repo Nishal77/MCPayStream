@@ -20,6 +20,8 @@ const Dashboard = () => {
     solPrice, 
     isLoading, 
     error,
+    isLive,
+    lastUpdate,
     fetchWallet,
     fetchTransactions,
     refreshWallet,
@@ -28,26 +30,12 @@ const Dashboard = () => {
   
   const [walletAddress, setWalletAddress] = useState('');
   const [showWalletInput, setShowWalletInput] = useState(!wallet);
-  const [isLive, setIsLive] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState(null);
 
   useEffect(() => {
     if (wallet?.address) {
       fetchTransactions();
     }
   }, [wallet?.address]);
-
-  // Update real-time status when transactions change
-  useEffect(() => {
-    if (transactions.length > 0) {
-      setIsLive(true);
-      setLastUpdate(new Date().toISOString());
-      
-      // Debug: Log transaction data
-      console.log('Transactions updated:', transactions);
-      console.log('Daily received calculation:', calculateTodayReceived(transactions));
-    }
-  }, [transactions]);
 
   const handleWalletSubmit = (e) => {
     e.preventDefault();
@@ -99,65 +87,55 @@ const Dashboard = () => {
                   <h1 className="text-xl font-bold text-white">
                     MCPayStream
                   </h1>
-                  <p className="text-sm text-white/60">Live Blockchain Analytics</p>
+                  <p className="text-xs text-white/60">Live Blockchain Analytics</p>
                 </div>
               </div>
-              
-              <div className="flex items-center space-x-3">
-                {/* Real-time Status */}
-                {wallet && (
-                  <div className="flex items-center justify-between px-3 py-2 bg-green-500/20 rounded-lg border border-green-500/30">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                      <span className="text-sm text-green-400 font-medium">
-                        Live Updates
+
+              {/* Live Status and Actions */}
+              <div className="flex items-center space-x-4">
+                {/* Live Status Badge */}
+                {isLive && (
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-green-500/20 rounded-lg border border-green-500/30">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-sm text-green-400 font-medium">
+                      Live Updates
+                    </span>
+                    {lastUpdate && (
+                      <span className="text-xs text-green-300">
+                        {new Date(lastUpdate).toLocaleTimeString()}
                       </span>
-                      {lastUpdate && (
-                        <span className="text-xs text-green-300">
-                          {new Date(lastUpdate).toLocaleTimeString()}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={handleRefresh}
-                      className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs rounded-lg border border-green-500/30 transition-all"
-                    >
-                      Refresh Data
-                    </button>
+                    )}
                   </div>
                 )}
-                
-                {/* Connection Status */}
-                <div className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-white/10 rounded-lg">
-                  <div className={`w-2 h-2 rounded-full ${error ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                  <span className="text-sm text-white/70">
-                    {error ? 'Disconnected' : 'Connected'}
-                  </span>
-                </div>
-                
+
+                {/* Manual Refresh Button */}
+                {wallet && (
+                  <button
+                    onClick={handleRefresh}
+                    className="flex items-center space-x-2 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-sm rounded-lg border border-blue-500/30 transition-all"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Refresh</span>
+                  </button>
+                )}
+
                 {/* Change Wallet Button */}
                 {wallet && (
-                  <button 
+                  <button
                     onClick={handleChangeWallet}
-                    className="px-4 py-2 bg-white/10 text-white text-sm font-medium rounded-lg border border-white/10 transition-all"
+                    className="px-3 py-2 bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 text-sm rounded-lg border border-gray-500/30 transition-all"
                   >
                     Change Wallet
                   </button>
                 )}
-                
+
                 {/* Theme Toggle */}
-                <button onClick={toggleTheme} className="p-3 rounded-xl bg-white/10 transition-all" aria-label="Toggle theme">
-                  {isDark ? (
-                    <Sun className="w-5 h-5 text-yellow-500" />
-                  ) : (
-                    <Moon className="w-5 h-5 text-gray-600" />
-                  )}
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all"
+                >
+                  {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
-                
-                {/* Settings */}
-                <a href="/settings" className="p-3 rounded-xl bg-white/10 transition-all" aria-label="Settings">
-                  <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                </a>
               </div>
             </div>
           </div>
@@ -165,79 +143,22 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <main className="max-w-full mx-auto px-6 py-8">
-          {/* Error Display */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs">!</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-red-400 text-sm font-medium">{error}</p>
-                  {error.includes('Too many requests') && (
-                    <div className="mt-2 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                      <p className="text-red-300 text-xs">
-                        <strong>Tip:</strong> The Solana Devnet faucet has rate limits. If you're testing, try:
-                      </p>
-                      <ul className="text-red-300 text-xs mt-1 ml-4 list-disc">
-                        <li>Wait a few minutes before trying again</li>
-                        <li>Use the web faucet at <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="underline">faucet.solana.com</a></li>
-                        <li>Check if your wallet already has SOL</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Real-time Transaction Notification */}
-          {wallet && transactions.length > 0 && (
-            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-green-400 font-medium">
-                    Live Transaction Monitoring Active
-                  </span>
-                </div>
-                <span className="text-sm text-green-300">
-                  {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} • Auto-updating
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Wallet Input */}
+          {/* Wallet Input Section */}
           {showWalletInput && (
-                            <div className="max-w-md mx-auto p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm transition-all duration-300">
-              <div className="text-center space-y-6">
-                                  <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl w-fit mx-auto transform transition-all duration-300">
-                  <Wallet className="w-8 h-8 text-white" />
-                </div>
-                
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold text-white">
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-8 backdrop-blur-sm">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-2">
                     Enter Wallet Address
                   </h2>
-                  <p className="text-white/60 text-sm">
-                    View live blockchain data and analytics for any Solana wallet
+                  <p className="text-white/60">
+                    Monitor live transactions and analytics for any Solana wallet
                   </p>
-                  <div className="mt-3 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-                    <p className="text-blue-300 text-xs">
-                      <strong>Note:</strong> For testing, you can use any Solana wallet address. If you need test SOL, visit{' '}
-                      <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="underline">
-                        Solana Devnet Faucet
-                      </a>
-                    </p>
-                  </div>
                 </div>
 
                 <form onSubmit={handleWalletSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="walletAddress" className="block text-sm font-medium text-white/80">
+                  <div>
+                    <label htmlFor="walletAddress" className="block text-sm font-medium text-white/80 mb-2">
                       Solana Wallet Address
                     </label>
                     <input
@@ -245,20 +166,20 @@ const Dashboard = () => {
                       id="walletAddress"
                       value={walletAddress}
                       onChange={(e) => setWalletAddress(e.target.value)}
-                      placeholder="Enter wallet address (e.g., D8FL9VwTjXgyLfvGwEZNyxUxyCTPXzcVnjhWPAZcgsS9)"
+                      placeholder="Enter wallet address (e.g., AWnVcuqiHSXxe4vLZVBxHPhKc6kzZWaCBTAvBqY5iDeQ)"
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                      disabled={isLoading}
+                      required
                     />
                   </div>
 
                   <button
                     type="submit"
-                    disabled={!walletAddress.trim() || isLoading}
-                    className="w-full py-3 px-6 bg-white text-black font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center space-x-2">
-                        <div className="loader w-5 h-5"></div>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         <span>Loading...</span>
                       </div>
                     ) : (
@@ -267,17 +188,40 @@ const Dashboard = () => {
                   </button>
                 </form>
 
-                {error && (
-                  <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-                    <p className="text-red-400 text-sm">{error}</p>
-                  </div>
-                )}
+                {/* Helpful Tips */}
+                <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <h3 className="text-sm font-medium text-blue-400 mb-2">💡 Testing Tips</h3>
+                  <ul className="text-xs text-blue-300 space-y-1">
+                    <li>• Use Solana Devnet for testing (no real SOL needed)</li>
+                    <li>• Visit <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="underline">Solana Devnet Faucet</a> to get test SOL</li>
+                    <li>• Send test transactions to see live updates</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error Display */}
+          {error && (
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-red-400 mb-2">Error Loading Wallet</h3>
+                <p className="text-red-300 mb-4">{error}</p>
+                <div className="text-sm text-red-300">
+                  <p className="mb-2">Common solutions:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Check if the wallet address is correct</li>
+                    <li>Ensure the backend server is running</li>
+                    <li>Try refreshing the page</li>
+                    <li>Wait a moment and try again (rate limiting)</li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}
 
           {/* Dashboard Content */}
-          {wallet && (
+          {wallet && !showWalletInput && (
             <>
               {/* Wallet Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
@@ -315,54 +259,37 @@ const Dashboard = () => {
 
               {/* Charts and Analytics */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6 transition-all duration-300">
-                  <h3 className="text-lg font-semibold text-white mb-4">
-                    Earnings Over Time
-                  </h3>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Earnings Chart</h3>
                   <EarningsChart walletAddress={wallet.address} />
                 </div>
-                
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6 transition-all duration-300">
-                  <h3 className="text-lg font-semibold text-white mb-4">
-                    Top Senders
-                  </h3>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Top Senders & Wallets</h3>
                   <Leaderboard walletAddress={wallet.address} />
                 </div>
               </div>
 
-              {/* Transactions */}
-              <div className="bg-white/5 rounded-lg border border-white/10 transition-all duration-300">
-                <div className="p-6 border-b border-white/10">
-                  <h3 className="text-lg font-semibold text-white">
-                    Recent Transactions
-                  </h3>
-                </div>
-                {transactions && transactions.length > 0 ? (
-                  <TransactionsTable 
-                    transactions={transactions} 
-                    onRefresh={() => fetchTransactions()}
-                  />
-                ) : (
-                  <div className="p-8 text-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Wallet className="w-8 h-8 text-purple-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-white mb-2">
-                      No transactions yet
-                    </h3>
-                    <p className="text-white/60 mb-4">
-                      This wallet hasn't received any payments yet. Share your wallet address to start receiving payments!
-                    </p>
-                    <div className="bg-white/10 rounded-lg p-4 border border-white/20">
-                      <p className="text-sm text-white/80 mb-2">
-                        <strong>Your Wallet Address:</strong>
-                      </p>
-                      <code className="text-xs text-white font-mono break-all bg-white/10 px-2 py-1 rounded">
-                        {wallet.address}
-                      </code>
-                    </div>
+              {/* Transactions Table */}
+              <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-white">Transaction History</h3>
+                  <div className="flex items-center space-x-2">
+                    {isLive && (
+                      <div className="flex items-center space-x-2 px-2 py-1 bg-green-500/20 rounded text-xs text-green-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                        <span>Live</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleRefresh}
+                      className="flex items-center space-x-1 px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs rounded transition-all"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Refresh</span>
+                    </button>
                   </div>
-                )}
+                </div>
+                <TransactionsTable transactions={transactions} />
               </div>
             </>
           )}

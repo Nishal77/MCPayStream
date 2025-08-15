@@ -1,168 +1,58 @@
-import { useState } from 'react';
-import { formatSOL, formatUSD, formatAddress, formatRelativeTime } from '../../shared/formatters';
-import { TRANSACTION_STATUS } from '../../shared/constants';
-import { RefreshCw } from 'lucide-react';
+import React from 'react';
+import { formatSOL, formatUSD, formatAddress } from '../../shared/formatters';
 
-const TransactionsTable = ({ transactions = [], onRefresh }) => {
-  const [sortField, setSortField] = useState('blockTime');
-  const [sortDirection, setSortDirection] = useState('desc');
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('desc');
-    }
-  };
-
-  // Normalize incoming payload keys from API (db + on-chain)
-  const normalized = transactions.map((t) => ({
-    signature: t.signature || t.txHash || t.id,
-    fromAddress: t.fromAddress || t.sender || t.senderAddress,
-    toAddress: t.toAddress || t.receiver || t.receiverAddress,
-    amount: typeof t.amount !== 'undefined' ? t.amount : (t.amountSOL || 0),
-    amountUSD: typeof t.amountUSD !== 'undefined' ? t.amountUSD : (t.usdValue || 0),
-    status: t.status || 'confirmed',
-    blockTime: t.blockTime || t.timestamp || t.time || null,
-  }));
-
-  const sortedTransactions = [...normalized].sort((a, b) => {
-    let aValue = a[sortField];
-    let bValue = b[sortField];
-
-    if (sortField === 'blockTime') {
-      aValue = new Date(aValue).getTime();
-      bValue = new Date(bValue).getTime();
-    }
-
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case TRANSACTION_STATUS.PENDING:
-        return <span className="status-pending">Pending</span>;
-      case TRANSACTION_STATUS.CONFIRMED:
-        return <span className="status-confirmed">Confirmed</span>;
-      case TRANSACTION_STATUS.FAILED:
-        return <span className="status-failed">Failed</span>;
-      default:
-        return <span className="status-pending">Unknown</span>;
-    }
-  };
-
-  const getSortIcon = (field) => {
-    if (sortField !== field) return null;
-    
-    return sortDirection === 'asc' ? (
-      <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-      </svg>
-    );
-  };
-
-  if (transactions.length === 0) {
+const TransactionsTable = ({ transactions = [] }) => {
+  if (!transactions || transactions.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          No transactions yet
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400">
-          Transactions will appear here once payments are received.
+        <h3 className="text-lg font-medium text-white mb-2">No transactions yet</h3>
+        <p className="text-white/60">
+          This wallet hasn't received any payments yet. Send some SOL to see live updates!
         </p>
       </div>
     );
   }
 
+  // Show all transactions (both incoming and outgoing)
+  const allTransactions = transactions.map(tx => {
+    // Determine direction based on transaction data
+    let direction = tx.direction;
+    if (!direction) {
+      // If no direction specified, assume it's incoming (for backward compatibility)
+      direction = 'IN';
+    }
+    
+    return {
+      ...tx,
+      direction: direction,
+      // Ensure we have the correct amount field
+      amount: tx.amount || tx.amountSOL || 0,
+      amountUSD: tx.amountUSD || 0,
+    };
+  });
+
   return (
-    <div className="overflow-x-auto rounded-lg border border-white/10">
-      {/* Table Header */}
-      <div className="px-6 py-4 border-b border-white/10">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">
-            Recent Transactions
-          </h3>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2 px-3 py-1 bg-green-500/20 rounded-lg border border-green-500/30">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-xs text-green-400 font-medium">Live</span>
-            </div>
-            <button
-              onClick={onRefresh}
-                                        className="p-2 text-white/70 transition-colors"
-              title="Refresh transactions"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-      <table className="min-w-full divide-y divide-white/10">
-        <thead className="bg-white/5">
-          <tr>
-            <th 
-              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
-              onClick={() => handleSort('blockTime')}
-            >
-              <div className="flex items-center">
-                Date
-                {getSortIcon('blockTime')}
-              </div>
-            </th>
-            <th 
-              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
-              onClick={() => handleSort('fromAddress')}
-            >
-              <div className="flex items-center">
-                From
-                {getSortIcon('fromAddress')}
-              </div>
-            </th>
-            <th 
-              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
-              onClick={() => handleSort('toAddress')}
-            >
-              <div className="flex items-center">
-                To
-                {getSortIcon('toAddress')}
-              </div>
-            </th>
-            <th 
-              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
-              onClick={() => handleSort('amount')}
-            >
-              <div className="flex items-center">
-                Amount
-                {getSortIcon('amount')}
-              </div>
-            </th>
-            <th 
-              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
-              onClick={() => handleSort('status')}
-            >
-              <div className="flex items-center">
-                Status
-                {getSortIcon('status')}
-              </div>
-            </th>
-            <th className="px-6 py-4 whitespace-nowrap text-sm text-white/80">Signature</th>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-white/10">
+            <th className="text-left py-4 px-6 text-sm font-medium text-white/80">Type</th>
+            <th className="text-left py-4 px-6 text-sm font-medium text-white/80">Amount</th>
+            <th className="text-left py-4 px-6 text-sm font-medium text-white/80">From</th>
+            <th className="text-left py-4 px-6 text-sm font-medium text-white/80">To</th>
+            <th className="text-left py-4 px-6 text-sm font-medium text-white/80">Transaction ID</th>
+            <th className="text-left py-4 px-6 text-sm font-medium text-white/80">Time</th>
+            <th className="text-left py-4 px-6 text-sm font-medium text-white/80">Status</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/10">
-          {transactions.map((transaction, index) => (
-            <tr key={transaction.id || transaction.signature || index} className="text-sm">
+        <tbody>
+          {allTransactions.map((transaction, index) => (
+            <tr key={transaction.id || transaction.signature || index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center space-x-3">
                   <div className={`w-2 h-2 rounded-full ${transaction.direction === 'IN' ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -178,9 +68,9 @@ const TransactionsTable = ({ transactions = [], onRefresh }) => {
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-white font-medium">
-                  {formatSOL(transaction.amountSOL || transaction.amount)}
+                  {formatSOL(transaction.amount)}
                 </div>
-                {transaction.amountUSD && (
+                {transaction.amountUSD > 0 && (
                   <div className="text-white/60 text-xs">
                     {formatUSD(transaction.amountUSD)}
                   </div>
@@ -199,7 +89,7 @@ const TransactionsTable = ({ transactions = [], onRefresh }) => {
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-white/60 text-xs">
                   {transaction.signature ? (
-                    <a 
+                    <a
                       href={`https://explorer.solana.com/tx/${transaction.signature}?cluster=devnet`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -238,6 +128,28 @@ const TransactionsTable = ({ transactions = [], onRefresh }) => {
           ))}
         </tbody>
       </table>
+      
+      {/* Transaction Summary */}
+      <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="text-center">
+            <p className="text-white/60">Total Transactions</p>
+            <p className="text-white font-semibold text-lg">{allTransactions.length}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-white/60">Total Received</p>
+            <p className="text-green-400 font-semibold text-lg">
+              {formatSOL(allTransactions.filter(tx => tx.direction === 'IN').reduce((sum, tx) => sum + tx.amount, 0))}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-white/60">Total Sent</p>
+            <p className="text-red-400 font-semibold text-lg">
+              {formatSOL(allTransactions.filter(tx => tx.direction === 'OUT').reduce((sum, tx) => sum + tx.amount, 0))}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

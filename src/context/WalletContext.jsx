@@ -21,6 +21,8 @@ export const WalletProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false); // Start with false since no wallet is loaded initially
   const [error, setError] = useState(null);
   const [socket, setSocket] = useState(null);
+  const [isLive, setIsLive] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   // Initialize socket connection
   useEffect(() => {
@@ -59,11 +61,26 @@ export const WalletProvider = ({ children }) => {
       setError('Failed to reconnect to server. Please check your connection.');
     });
 
-    // Listen for wallet updates
+    // Listen for transaction updates
     socketInstance.on('transaction-update', (data) => {
       console.log('Received transaction update:', data);
-      // Add new transaction to the list
-      setTransactions(prev => [data, ...prev]);
+      
+      // Add new transaction to the list (prepend to show newest first)
+      setTransactions(prev => {
+        // Check if transaction already exists to avoid duplicates
+        const exists = prev.some(tx => tx.signature === data.signature);
+        if (exists) {
+          console.log('Transaction already exists, skipping duplicate:', data.signature);
+          return prev;
+        }
+        
+        console.log('Adding new transaction to list:', data);
+        return [data, ...prev];
+      });
+      
+      // Update live status
+      setIsLive(true);
+      setLastUpdate(new Date().toISOString());
       
       // Refresh wallet data to get updated balance and stats
       if (wallet?.address) {
@@ -78,30 +95,36 @@ export const WalletProvider = ({ children }) => {
       setBalance(data.balance);
       setBalanceUSD(data.balanceUSD);
       setSolPrice(data.solPrice);
+      
+      // Update live status
+      setIsLive(true);
+      setLastUpdate(new Date().toISOString());
     });
 
     // Listen for earnings updates
     socketInstance.on('earnings-update', (data) => {
       console.log('Received earnings update:', data);
-      // Trigger earnings chart refresh
-      if (wallet?.address) {
-        // The earnings chart will automatically refresh when this event is received
-      }
+      // Update live status
+      setIsLive(true);
+      setLastUpdate(new Date().toISOString());
     });
 
     // Listen for leaderboard updates
     socketInstance.on('leaderboard-update', (data) => {
       console.log('Received leaderboard update:', data);
-      // Trigger leaderboard refresh
-      if (wallet?.address) {
-        // The leaderboard will automatically refresh when this event is received
-      }
+      // Update live status
+      setIsLive(true);
+      setLastUpdate(new Date().toISOString());
     });
 
     // Listen for general stats updates
     socketInstance.on('stats-update', (data) => {
       console.log('Received stats update:', data);
       if (data.walletAddress === wallet?.address) {
+        // Update live status
+        setIsLive(true);
+        setLastUpdate(new Date().toISOString());
+        
         // Refresh relevant data based on update type
         switch (data.type) {
           case 'transaction':
@@ -121,7 +144,7 @@ export const WalletProvider = ({ children }) => {
     return () => {
       socketInstance.disconnect();
     };
-  }, [wallet?.address, balance, solPrice]);
+  }, [wallet?.address]);
 
   // Join wallet room when wallet changes
   useEffect(() => {
@@ -145,6 +168,8 @@ export const WalletProvider = ({ children }) => {
       setTransactions([]);
       setBalance(0);
       setBalanceUSD(0);
+      setIsLive(false);
+      setLastUpdate(null);
       
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/wallets/${address}`);
       
@@ -185,6 +210,10 @@ export const WalletProvider = ({ children }) => {
       setBalanceUSD(normalized.balanceUSD || 0);
       setSolPrice(normalized.currentSolPrice || 0);
       
+      // Set live status
+      setIsLive(true);
+      setLastUpdate(new Date().toISOString());
+      
       console.log('Live wallet data loaded:', normalized);
       
     } catch (error) {
@@ -205,8 +234,6 @@ export const WalletProvider = ({ children }) => {
       setIsLoading(false);
     }
   };
-
-
 
   // Fetch transactions with retry logic
   const fetchTransactions = async (limit = 50, offset = 0, retryCount = 0) => {
@@ -245,6 +272,12 @@ export const WalletProvider = ({ children }) => {
       console.log('Processed transactions:', transactionList);
       
       setTransactions(transactionList);
+      
+      // Update live status
+      if (transactionList.length > 0) {
+        setIsLive(true);
+        setLastUpdate(new Date().toISOString());
+      }
       
     } catch (err) {
       console.error('Error fetching transactions:', err);
@@ -296,6 +329,8 @@ export const WalletProvider = ({ children }) => {
     setBalanceUSD(0);
     setSolPrice(0);
     setError(null);
+    setIsLive(false);
+    setLastUpdate(null);
   };
 
   // Get transaction statistics
@@ -304,11 +339,11 @@ export const WalletProvider = ({ children }) => {
     
     const totalReceived = transactions
       .filter(tx => tx.toAddress === wallet?.address && tx.status === 'confirmed')
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .reduce((sum, tx) => sum + (tx.amount || tx.amountSOL || 0), 0);
     
     const totalSent = transactions
       .filter(tx => tx.fromAddress === wallet?.address && tx.status === 'confirmed')
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .reduce((sum, tx) => sum + (tx.amount || tx.amountSOL || 0), 0);
     
     const pendingCount = transactions.filter(tx => tx.status === 'pending').length;
     
@@ -328,6 +363,8 @@ export const WalletProvider = ({ children }) => {
     solPrice,
     isLoading,
     error,
+    isLive,
+    lastUpdate,
     fetchWallet,
     fetchTransactions,
     updateWalletSettings,
