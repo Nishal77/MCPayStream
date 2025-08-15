@@ -1,4 +1,4 @@
-# MCPayStream 🚀
+MCPayStream 🚀 – Real-Time YouTube SuperChat on Solana
 
 **Live Blockchain Analytics Platform for Solana**
 
@@ -368,12 +368,6 @@ cd backend
 npm run build
 ```
 
-### Deployment Options
-
-- **Vercel/Netlify** - Frontend deployment
-- **Railway/Render** - Backend deployment
-- **Supabase** - Database hosting
-- **Docker** - Containerized deployment
 
 ## 🐛 Troubleshooting
 
@@ -484,16 +478,3 @@ solana confirm -v <TRANSACTION_SIGNATURE>
 4. Test thoroughly
 5. Submit a pull request
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-- **Issues**: Create a GitHub issue
-- **Documentation**: Check this README
-- **Community**: Join our Discord/Telegram
-
----
-
-**Built with ❤️ for the Solana ecosystem**
