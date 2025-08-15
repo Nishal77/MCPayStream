@@ -18,14 +18,22 @@ const Leaderboard = ({ walletAddress }) => {
   const fetchLeaderboardData = async () => {
     setLoading(true);
     try {
-      // Fetch top senders globally
+      // Fetch top senders with period filter
       const sendersResponse = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/stats/top-senders?limit=10`
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/stats/top-senders?limit=10&period=${period}`
       );
       
       if (sendersResponse.ok) {
         const sendersData = await sendersResponse.json();
-        setTopSenders(sendersData.data?.senders || []);
+        if (sendersData.success) {
+          setTopSenders(sendersData.data?.senders || []);
+        } else {
+          console.error('Error in senders response:', sendersData.message);
+          setTopSenders([]);
+        }
+      } else {
+        console.error('Senders response not ok:', sendersResponse.status);
+        setTopSenders([]);
       }
 
       // Fetch top wallets globally
@@ -35,10 +43,20 @@ const Leaderboard = ({ walletAddress }) => {
       
       if (walletsResponse.ok) {
         const walletsData = await walletsResponse.json();
-        setTopWallets(walletsData.data?.rankings || []);
+        if (walletsData.success) {
+          setTopWallets(walletsData.data?.rankings || []);
+        } else {
+          console.error('Error in wallets response:', walletsData.message);
+          setTopWallets([]);
+        }
+      } else {
+        console.error('Wallets response not ok:', walletsResponse.status);
+        setTopWallets([]);
       }
     } catch (error) {
       console.error('Error fetching leaderboard data:', error);
+      setTopSenders([]);
+      setTopWallets([]);
     } finally {
       setLoading(false);
     }
@@ -70,15 +88,8 @@ const Leaderboard = ({ walletAddress }) => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            ))}
-          </div>
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="loader loader-dark"></div>
       </div>
     );
   }
@@ -103,6 +114,12 @@ const Leaderboard = ({ walletAddress }) => {
           </div>
           
           <div className="flex items-center space-x-2">
+            {/* Real-time Indicator */}
+            <div className="flex items-center space-x-2 px-2 py-1 bg-green-500/20 rounded-lg border border-green-500/30">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-xs text-green-400 font-medium">Live</span>
+            </div>
+            
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
@@ -190,6 +207,37 @@ const Leaderboard = ({ walletAddress }) => {
                         </p>
                       </div>
                     </div>
+                    
+                    {/* Sample Transactions */}
+                    {sender.sampleTransactions && sender.sampleTransactions.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/10">
+                        <p className="text-xs text-white/60 mb-2">Recent transactions:</p>
+                        <div className="space-y-2">
+                          {sender.sampleTransactions.slice(0, 2).map((tx, txIndex) => (
+                            <div key={tx.id || txIndex} className="flex items-center justify-between text-xs bg-white/5 rounded px-2 py-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-white/70">ID:</span>
+                                <code className="text-white/90 font-mono text-xs">
+                                  {tx.signature ? `${tx.signature.slice(0, 8)}...` : `TX-${txIndex + 1}`}
+                                </code>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-white/70">To:</span>
+                                <code className="text-white/90 font-mono text-xs">
+                                  {formatAddress(tx.toAddress)}
+                                </code>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-white/70">Amount:</span>
+                                <span className="text-white/90 font-medium">
+                                  {formatSOL(tx.amount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))

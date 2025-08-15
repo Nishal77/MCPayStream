@@ -125,49 +125,52 @@ export async function getConfirmedTransactionHistory(address, limit = 20) {
  * @param {string} targetAddress - Address to check for payments
  * @returns {Object|null} Parsed payment info or null if not a payment
  */
-export function parsePaymentTransaction(transaction, targetAddress) {
+export function parsePaymentTransaction(transaction, address) {
   try {
     if (!transaction || !transaction.meta || transaction.meta.err) {
       return null;
     }
     
-    const { preBalances, postBalances, preTokenBalances, postTokenBalances } = transaction.meta;
-    const { message } = transaction.transaction;
+    const message = transaction.transaction.message;
+    const accountKeys = message.accountKeys;
+    const targetAddress = address;
     
-    // Check if this is a transfer to our target address
-    const targetIndex = message.accountKeys.findIndex(key => key.toBase58() === targetAddress);
-    
+    // Find the account index for the target address
+    const targetIndex = accountKeys.findIndex(key => key.toBase58() === targetAddress);
     if (targetIndex === -1) {
-      return null; // Not a transfer to our address
+      return null;
     }
     
-    // Calculate SOL amount delta for the target (positive=incoming, negative=outgoing)
-    const preBalance = preBalances[targetIndex] || 0;
-    const postBalance = postBalances[targetIndex] || 0;
+    // Calculate balance changes
+    const preBalance = transaction.meta.preBalances[targetIndex];
+    const postBalance = transaction.meta.postBalances[targetIndex];
     const deltaLamports = postBalance - preBalance;
-    const solAmount = Math.abs(deltaLamports) / LAMPORTS_PER_SOL;
-    if (solAmount === 0) return null; // skip no-op
     
-    // Find sender (account that lost SOL)
+    // Find the sender (account that lost SOL)
     let senderIndex = -1;
-    for (let i = 0; i < preBalances.length; i++) {
-      if (i !== targetIndex && preBalances[i] > postBalances[i]) {
-        senderIndex = i;
-        break;
+    for (let i = 0; i < accountKeys.length; i++) {
+      if (i !== targetIndex) {
+        const preBalance = transaction.meta.preBalances[i];
+        const postBalance = transaction.meta.postBalances[i];
+        if (postBalance < preBalance) {
+          senderIndex = i;
+          break;
+        }
       }
     }
     
     if (senderIndex === -1) {
-      return null; // Couldn't identify sender
+      return null;
     }
     
-    const senderAddress = message.accountKeys[senderIndex].toBase58();
+    const solAmount = Math.abs(deltaLamports) / LAMPORTS_PER_SOL;
+    const senderAddress = accountKeys[senderIndex].toBase58();
     const fee = transaction.meta.fee / LAMPORTS_PER_SOL;
     
     return {
       signature: transaction.transaction.signatures[0],
-      sender: senderAddress,
-      receiver: targetAddress,
+      fromAddress: senderAddress,
+      toAddress: targetAddress,
       amountSOL: solAmount,
       direction: deltaLamports > 0 ? 'IN' : 'OUT',
       fee,

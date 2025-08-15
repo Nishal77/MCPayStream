@@ -158,19 +158,62 @@ WEBHOOK_SECRET=your-webhook-secret
 5. **Export Data**: Download transaction data as CSV
 6. **Customize Settings**: Configure webhooks and preferences
 
-### Quick Phantom Wallet Setup
+## 🧪 Devnet Testing (no real SOL needed)
 
-```bash
-# Run the automated setup script
-./setup-phantom.sh
+Backend is Devnet-ready. Use the commands below to generate a keypair, airdrop test SOL, and send transactions. These work even if the Solana CLI is not installed.
 
-# Or manually:
-cd backend
-npm run init-wallet          # Initialize the wallet
-npm run seed-demo            # (Optional) Add demo transaction data
-cd ..
-npm run full:dev            # Start the application
+### Configure backend/.env
 ```
+SOLANA_NETWORK=https://api.devnet.solana.com
+SOLANA_WALLET_KEYPAIR=~/.config/solana/mcpaystream.json
+```
+
+### From the backend folder
+```bash
+cd backend
+
+# 1) Generate a test keypair (prints public key)
+npm run test:devnet:keypair
+
+# 2) Airdrop 2 SOL via RPC (may rate-limit with 429)
+npm run test:devnet:airdrop -- <ADDRESS>
+
+# 3) Send SOL without the CLI
+npm run test:devnet:send -- <RECIPIENT_ADDRESS> <AMOUNT_SOL>
+
+# 4) Helper: print your keypair address (JS)
+npm run test:devnet:address
+
+# 5) Helper: print balance for an address (JS)
+npm run test:devnet:balance -- <ADDRESS>
+```
+
+If you want to use the Solana CLI (optional):
+```bash
+# macOS install (Homebrew)
+brew install solana
+
+# Or official installer
+sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
+export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+
+# Point CLI to Devnet and your keypair
+solana config set --url https://api.devnet.solana.com
+solana config set -k ~/.config/solana/mcpaystream.json
+
+# Airdrop and transfer with CLI
+solana airdrop 2 <ADDRESS>
+solana transfer <RECIPIENT_ADDRESS> <AMOUNT_SOL> --allow-unfunded-recipient
+
+# Verify
+solana address
+solana balance <ADDRESS>
+```
+
+Notes:
+- The public Devnet faucet can return 429. If so, retry later or use `https://faucet.solana.com`.
+- The dashboard transactions view merges DB and live on-chain results. You can force live on-chain fetch with:
+  - `GET /api/transactions/creator/:address?includeOnChain=true&onChainLimit=50`
 
 ## 🔧 Development
 

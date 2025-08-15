@@ -60,25 +60,59 @@ export const WalletProvider = ({ children }) => {
     });
 
     // Listen for wallet updates
-    socketInstance.on(SOCKET_EVENTS.WALLET_UPDATE, (data) => {
-      if (data.address === wallet?.address) {
-        setBalance(data.balance);
-        setBalanceUSD(data.balance * solPrice);
+    socketInstance.on('transaction-update', (data) => {
+      console.log('Received transaction update:', data);
+      // Add new transaction to the list
+      setTransactions(prev => [data, ...prev]);
+      
+      // Refresh wallet data to get updated balance
+      if (wallet?.address) {
+        fetchWallet(wallet.address);
       }
     });
 
-    // Listen for new transactions
-    socketInstance.on(SOCKET_EVENTS.NEW_TRANSACTION, (data) => {
-      if (data.addresses.includes(wallet?.address)) {
-        // Refresh transactions
-        fetchTransactions();
+    // Listen for balance updates
+    socketInstance.on('balance-update', (data) => {
+      console.log('Received balance update:', data);
+      setBalance(data.balance);
+      setBalanceUSD(data.balanceUSD);
+      setSolPrice(data.solPrice);
+    });
+
+    // Listen for earnings updates
+    socketInstance.on('earnings-update', (data) => {
+      console.log('Received earnings update:', data);
+      // Trigger earnings chart refresh
+      if (wallet?.address) {
+        // The earnings chart will automatically refresh when this event is received
       }
     });
 
-    // Listen for price updates
-    socketInstance.on(SOCKET_EVENTS.PRICE_UPDATE, (data) => {
-      setSolPrice(data.price);
-      setBalanceUSD(balance * data.price);
+    // Listen for leaderboard updates
+    socketInstance.on('leaderboard-update', (data) => {
+      console.log('Received leaderboard update:', data);
+      // Trigger leaderboard refresh
+      if (wallet?.address) {
+        // The leaderboard will automatically refresh when this event is received
+      }
+    });
+
+    // Listen for general stats updates
+    socketInstance.on('stats-update', (data) => {
+      console.log('Received stats update:', data);
+      if (data.walletAddress === wallet?.address) {
+        // Refresh relevant data based on update type
+        switch (data.type) {
+          case 'transaction':
+            fetchTransactions();
+            break;
+          case 'earnings':
+            // Earnings chart will refresh automatically
+            break;
+          default:
+            break;
+        }
+      }
     });
 
     setSocket(socketInstance);
@@ -99,17 +133,40 @@ export const WalletProvider = ({ children }) => {
     }
   }, [socket, wallet?.address]);
 
-  // Fetch wallet data
-  const fetchWallet = async (address) => {
+  // Fetch wallet data with retry logic
+  const fetchWallet = async (address, retryCount = 0) => {
     try {
       setIsLoading(true);
       setError(null);
+      
+      // Clear previous data when loading a new wallet
+      setWallet(null);
+      setTransactions([]);
+      setBalance(0);
+      setBalanceUSD(0);
       
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/wallets/${address}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const message = errorData?.error?.message || errorData?.message || 'Failed to fetch wallet data';
+        
+        // Handle rate limiting specifically
+        if (response.status === 429) {
+          if (retryCount < 3) {
+            const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
+            console.log(`Rate limited. Retrying in ${delay}ms... (attempt ${retryCount + 1}/3)`);
+            
+            setTimeout(() => {
+              fetchWallet(address, retryCount + 1);
+            }, delay);
+            return;
+          } else {
+            throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+          }
+        }
+        
+        // Handle other errors
+        const message = errorData?.error?.message || errorData?.message || `Failed to fetch wallet data (${response.status})`;
         throw new Error(message);
       }
       
@@ -131,7 +188,18 @@ export const WalletProvider = ({ children }) => {
       
     } catch (error) {
       console.error('Error fetching wallet:', error);
-      setError(error.message || 'Failed to fetch wallet data. Please check the address and try again.');
+      
+      // Provide user-friendly error messages
+      let userMessage = error.message;
+      if (error.message.includes('Rate limit')) {
+        userMessage = 'Too many requests. Please wait a moment and try again.';
+      } else if (error.message.includes('Failed to fetch')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message.includes('500')) {
+        userMessage = 'Server error. Please try again in a moment.';
+      }
+      
+      setError(userMessage);
     } finally {
       setIsLoading(false);
     }
@@ -139,8 +207,8 @@ export const WalletProvider = ({ children }) => {
 
 
 
-  // Fetch transactions
-  const fetchTransactions = async (limit = 50, offset = 0) => {
+  // Fetch transactions with retry logic
+  const fetchTransactions = async (limit = 50, offset = 0, retryCount = 0) => {
     if (!wallet?.address) return;
     
     try {
@@ -149,7 +217,23 @@ export const WalletProvider = ({ children }) => {
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch transactions');
+        // Handle rate limiting
+        if (response.status === 429) {
+          if (retryCount < 3) {
+            const delay = Math.pow(2, retryCount) * 1000;
+            console.log(`Rate limited. Retrying transactions in ${delay}ms... (attempt ${retryCount + 1}/3)`);
+            
+            setTimeout(() => {
+              fetchTransactions(limit, offset, retryCount + 1);
+            }, delay);
+            return;
+          } else {
+            console.error('Rate limit exceeded for transactions');
+            return;
+          }
+        }
+        
+        throw new Error(`Failed to fetch transactions (${response.status})`);
       }
       
       const data = await response.json();
@@ -158,6 +242,7 @@ export const WalletProvider = ({ children }) => {
       
     } catch (err) {
       console.error('Error fetching transactions:', err);
+      // Don't show error to user for transactions, just log it
     }
   };
 
@@ -230,7 +315,6 @@ export const WalletProvider = ({ children }) => {
   };
 
   const value = {
-    // State
     wallet,
     transactions,
     balance,
@@ -238,17 +322,11 @@ export const WalletProvider = ({ children }) => {
     solPrice,
     isLoading,
     error,
-    
-    // Actions
     fetchWallet,
     fetchTransactions,
     updateWalletSettings,
     refreshWallet,
-    clearWallet,
-    getTransactionStats,
-    
-    // Socket
-    socket,
+    setWallet, // Add setWallet to context
   };
 
   return (

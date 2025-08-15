@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { formatSOL, formatUSD, formatAddress, formatRelativeTime } from '../../shared/formatters';
 import { TRANSACTION_STATUS } from '../../shared/constants';
+import { RefreshCw } from 'lucide-react';
 
-const TransactionsTable = ({ transactions = [] }) => {
+const TransactionsTable = ({ transactions = [], onRefresh }) => {
   const [sortField, setSortField] = useState('blockTime');
   const [sortDirection, setSortDirection] = useState('desc');
 
@@ -87,6 +88,27 @@ const TransactionsTable = ({ transactions = [] }) => {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10">
+      {/* Table Header */}
+      <div className="px-6 py-4 border-b border-white/10">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">
+            Recent Transactions
+          </h3>
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 px-3 py-1 bg-green-500/20 rounded-lg border border-green-500/30">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-xs text-green-400 font-medium">Live</span>
+            </div>
+            <button
+              onClick={onRefresh}
+              className="p-2 text-white/70 hover:text-white transition-colors"
+              title="Refresh transactions"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
       <table className="min-w-full divide-y divide-white/10">
         <thead className="bg-white/5">
           <tr>

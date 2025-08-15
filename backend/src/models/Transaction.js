@@ -238,13 +238,28 @@ export async function getTransactionStats(creatorId = null) {
   try {
     const where = creatorId ? { creatorId } : {};
     
+    // Get creator's address to filter for incoming transactions
+    let creatorAddress = null;
+    if (creatorId) {
+      const creator = await prisma.creator.findUnique({
+        where: { id: creatorId },
+        select: { solanaAddress: true }
+      });
+      creatorAddress = creator?.solanaAddress;
+    }
+    
+    // Add filter for incoming transactions only
+    const incomingWhere = creatorAddress 
+      ? { ...where, receiverAddress: creatorAddress }
+      : where;
+    
     const [total, confirmed, pending, failed, totalAmount] = await Promise.all([
-      prisma.transaction.count({ where }),
-      prisma.transaction.count({ where: { ...where, status: 'CONFIRMED' } }),
-      prisma.transaction.count({ where: { ...where, status: 'PENDING' } }),
-      prisma.transaction.count({ where: { ...where, status: 'FAILED' } }),
+      prisma.transaction.count({ where: incomingWhere }),
+      prisma.transaction.count({ where: { ...incomingWhere, status: 'CONFIRMED' } }),
+      prisma.transaction.count({ where: { ...incomingWhere, status: 'PENDING' } }),
+      prisma.transaction.count({ where: { ...incomingWhere, status: 'FAILED' } }),
       prisma.transaction.aggregate({
-        where: { ...where, status: 'CONFIRMED' },
+        where: { ...incomingWhere, status: 'CONFIRMED' },
         _sum: {
           amountSOL: true,
           usdValue: true,

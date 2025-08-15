@@ -8,7 +8,8 @@ import {
   updateTransaction,
   getRecentTransactions,
   getTransactionStats,
-  deleteTransaction
+  deleteTransaction,
+  createTransaction
 } from '../models/Transaction.js';
 import { getCreatorBySolanaAddress } from '../models/creator.js';
 import { exportTransactionsToCSV, exportTransactionsToJSON } from '../services/exportService.js';
@@ -44,17 +45,20 @@ export const getCreatorTransactions = async (req, res) => {
     });
 
     // Normalize DB transactions to UI-friendly shape
-    const dbNormalized = result.transactions.map((tx) => ({
-      id: tx.id,
-      signature: tx.txHash,
-      fromAddress: tx.senderAddress,
-      toAddress: tx.receiverAddress,
-      amount: tx.amountSOL,
-      amountUSD: tx.usdValue,
-      status: (tx.status || 'CONFIRMED').toLowerCase(),
-      blockTime: tx.timestamp ? new Date(tx.timestamp).getTime() : undefined,
-      source: 'db',
-    }));
+    const dbNormalized = result.transactions
+      .filter(tx => tx.receiverAddress === address) // Only incoming transactions
+      .map((tx) => ({
+        id: tx.id,
+        signature: tx.txHash,
+        fromAddress: tx.senderAddress,
+        toAddress: tx.receiverAddress,
+        amount: tx.amountSOL,
+        amountUSD: tx.usdValue,
+        status: (tx.status || 'CONFIRMED').toLowerCase(),
+        blockTime: tx.timestamp ? new Date(tx.timestamp).getTime() : undefined,
+        source: 'db',
+        direction: 'IN'
+      }));
 
     let merged = [...dbNormalized];
 
@@ -65,20 +69,46 @@ export const getCreatorTransactions = async (req, res) => {
         getCachedSolPrice(),
       ]);
 
-      const chainNormalized = chainTxs.map((t) => ({
-        id: `onchain-${t.signature}`,
-        signature: t.signature,
-        fromAddress: t.sender,
-        toAddress: t.receiver,
-        amount: t.amountSOL,
-        amountUSD: t.amountSOL * (solPrice || 0),
-        status: 'confirmed',
-        blockTime: t.blockTime ? t.blockTime * 1000 : undefined,
-        source: 'onchain',
-      }));
+      const chainNormalized = chainTxs
+        .filter(tx => tx.direction === 'IN') // Only incoming transactions
+        .map((t) => ({
+          id: `onchain-${t.signature}`,
+          signature: t.signature,
+          fromAddress: t.fromAddress,
+          toAddress: t.toAddress,
+          amount: t.amountSOL,
+          amountUSD: t.amountSOL * (solPrice || 0),
+          status: 'confirmed',
+          blockTime: t.blockTime ? t.blockTime * 1000 : undefined,
+          source: 'onchain',
+          direction: 'IN'
+        }));
+
+      // Save new on-chain transactions to database
+      const existingSignatures = new Set(dbNormalized.map((x) => x.signature).filter(Boolean));
+      const newTransactions = chainNormalized.filter((x) => !existingSignatures.has(x.signature));
+      
+      // Save new transactions to database
+      for (const tx of newTransactions) {
+        try {
+          await createTransaction({
+            txHash: tx.signature,
+            senderAddress: tx.fromAddress,
+            receiverAddress: tx.toAddress,
+            amountSOL: tx.amount,
+            usdValue: tx.amountUSD,
+            status: 'CONFIRMED',
+            creatorId: creator.id,
+            timestamp: tx.blockTime ? new Date(tx.blockTime) : new Date(),
+          });
+          logger.info(`Saved on-chain transaction to DB: ${tx.signature}`);
+        } catch (error) {
+          logger.error(`Failed to save transaction ${tx.signature}:`, error);
+          // Continue with other transactions
+        }
+      }
 
       // Deduplicate by signature/txHash
-      const existingSignatures = new Set(dbNormalized.map((x) => x.signature).filter(Boolean));
       const uniqueChain = chainNormalized.filter((x) => !existingSignatures.has(x.signature));
       merged = [...uniqueChain, ...dbNormalized];
       // Sort by blockTime desc when available

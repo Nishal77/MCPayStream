@@ -20,10 +20,20 @@ const EarningsChart = ({ walletAddress }) => {
       setIsLoading(true);
       setError(null);
       
-      // This would normally fetch from your API
-      // For now, we'll generate mock data
-      const mockData = generateMockData();
-      setChartData(mockData);
+      // Fetch live data from API
+      const response = await fetch(`http://localhost:5001/api/stats/earnings/${walletAddress}?timeRange=${timeRange}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setChartData(result.data);
+      } else {
+        throw new Error(result.message || 'Failed to fetch chart data');
+      }
       
     } catch (err) {
       setError('Failed to load chart data');
@@ -31,33 +41,6 @@ const EarningsChart = ({ walletAddress }) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const generateMockData = () => {
-    const days = timeRange === '24H' ? 24 : 
-                 timeRange === '7D' ? 7 : 
-                 timeRange === '30D' ? 30 : 365;
-    
-    const data = [];
-    const now = new Date();
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      
-      // Generate random earnings data
-      const earnings = Math.random() * 10 + (Math.random() * 5); // 0-15 SOL
-      const earningsUSD = earnings * (Math.random() * 50 + 100); // Random SOL price between $100-$150
-      
-      data.push({
-        date: date.toISOString().split('T')[0],
-        earnings: parseFloat(earnings.toFixed(4)),
-        earningsUSD: parseFloat(earningsUSD.toFixed(2)),
-        transactions: Math.floor(Math.random() * 10) + 1,
-      });
-    }
-    
-    return data;
   };
 
   const formatXAxis = (tickItem) => {
@@ -104,11 +87,8 @@ const EarningsChart = ({ walletAddress }) => {
 
   if (isLoading) {
     return (
-      <div className="h-64 flex items-center justify-center">
-        <div className="text-center">
-          <div className="spinner w-8 h-8 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading chart data...</p>
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="loader loader-dark"></div>
       </div>
     );
   }

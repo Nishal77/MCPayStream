@@ -1,21 +1,21 @@
-import { body, validationResult } from 'express-validator';
+import { body, param, validationResult } from 'express-validator';
 import { 
   getCreatorBySolanaAddress, 
+  createCreator, 
   updateCreator, 
-  createCreator,
   getAllCreators 
 } from '../models/creator.js';
 import { getTransactionStats } from '../models/Transaction.js';
-import { getCachedSolPrice } from '../blockchain/price.js';
 import { 
   getWalletBalance, 
   getWalletAccountInfo, 
-  getWalletTokenAccounts,
+  getWalletTokenAccounts, 
   getWalletTransactionCount,
   walletExists,
   isValidSolanaAddress
 } from '../blockchain/wallet.js';
-import { generateWalletQRCode } from '../utils/qrCode.js';
+import { getCachedSolPrice } from '../blockchain/price.js';
+import realTimeService from '../services/realTimeService.js';
 import logger from '../utils/logger.js';
 import { formatApiResponse, formatApiError } from '../utils/format.js';
 
@@ -110,6 +110,14 @@ export const getCreator = async (req, res) => {
     };
 
     res.json(formatApiResponse(response, 'Live wallet data retrieved successfully'));
+    
+    // Start real-time monitoring for this wallet
+    try {
+      realTimeService.startMonitoringWallet(address);
+      logger.info(`Started real-time monitoring for wallet: ${address}`);
+    } catch (error) {
+      logger.error(`Failed to start real-time monitoring for wallet ${address}:`, error);
+    }
   } catch (error) {
     logger.error('Error getting creator:', error);
     res.status(500).json(formatApiError('Failed to get live wallet data', error.message));
