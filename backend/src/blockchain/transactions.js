@@ -146,13 +146,33 @@ export function parsePaymentTransaction(transaction, address) {
     const postBalance = transaction.meta.postBalances[targetIndex];
     const deltaLamports = postBalance - preBalance;
     
-    // Find the sender (account that lost SOL)
+    // Only process if there's a positive balance change (incoming SOL)
+    if (deltaLamports <= 0) {
+      return null;
+    }
+    
+    // Find the sender by looking for accounts that lost SOL
     let senderIndex = -1;
+    let maxLoss = 0;
+    
     for (let i = 0; i < accountKeys.length; i++) {
       if (i !== targetIndex) {
         const preBalance = transaction.meta.preBalances[i];
         const postBalance = transaction.meta.postBalances[i];
-        if (postBalance < preBalance) {
+        const loss = preBalance - postBalance;
+        
+        // Find the account with the biggest loss (excluding fees)
+        if (loss > maxLoss && loss > 0) {
+          maxLoss = loss;
+          senderIndex = i;
+        }
+      }
+    }
+    
+    if (senderIndex === -1) {
+      // If no clear sender found, try to infer from the first account that's not the target
+      for (let i = 0; i < accountKeys.length; i++) {
+        if (i !== targetIndex && i < transaction.meta.preBalances.length) {
           senderIndex = i;
           break;
         }
@@ -163,20 +183,29 @@ export function parsePaymentTransaction(transaction, address) {
       return null;
     }
     
-    const solAmount = Math.abs(deltaLamports) / LAMPORTS_PER_SOL;
+    const solAmount = deltaLamports / LAMPORTS_PER_SOL;
     const senderAddress = accountKeys[senderIndex].toBase58();
     const fee = transaction.meta.fee / LAMPORTS_PER_SOL;
+    
+    // Verify this is a valid SOL transfer (amount should be reasonable)
+    if (solAmount <= 0 || solAmount > 1000000) { // Max 1M SOL sanity check
+      return null;
+    }
+    
+    logger.info(`Parsed transaction: ${transaction.transaction.signatures[0]} - ${solAmount} SOL from ${senderAddress} to ${targetAddress}`);
     
     return {
       signature: transaction.transaction.signatures[0],
       fromAddress: senderAddress,
       toAddress: targetAddress,
       amountSOL: solAmount,
-      direction: deltaLamports > 0 ? 'IN' : 'OUT',
+      direction: 'IN', // Always IN for this function since we filter for positive delta
       fee,
       blockTime: transaction.blockTime,
       slot: transaction.slot,
-      type: 'SOL_TRANSFER'
+      type: 'SOL_TRANSFER',
+      preBalance: preBalance / LAMPORTS_PER_SOL,
+      postBalance: postBalance / LAMPORTS_PER_SOL
     };
   } catch (error) {
     logger.error('Error parsing payment transaction:', error);
@@ -195,7 +224,10 @@ export async function getRecentTransactions(address, limit = 10) {
     const connection = solanaConfig.getConnection();
     const publicKey = new PublicKey(address);
     
-    const signatures = await connection.getSignaturesForAddress(publicKey, { limit });
+    // Get more signatures to account for non-payment transactions
+    const signatures = await connection.getSignaturesForAddress(publicKey, { limit: limit * 5 });
+    
+    logger.info(`Fetching ${signatures.length} transactions for address: ${address}`);
     
     const transactions = await Promise.all(
       signatures.map(async (sig) => {
@@ -205,7 +237,19 @@ export async function getRecentTransactions(address, limit = 10) {
           });
           
           if (tx && tx.meta && !tx.meta.err) {
-            return parsePaymentTransaction(tx, address);
+            // Try to parse as payment transaction first
+            const parsed = parsePaymentTransaction(tx, address);
+            if (parsed) {
+              logger.info(`Parsed payment transaction: ${parsed.signature} - ${parsed.amountSOL} SOL from ${parsed.fromAddress}`);
+              return parsed;
+            }
+            
+            // If not a payment transaction, try to extract any SOL transfer
+            const solTransfer = extractSOLTransfer(tx, address);
+            if (solTransfer) {
+              logger.info(`Extracted SOL transfer: ${solTransfer.signature} - ${solTransfer.amountSOL} SOL`);
+              return solTransfer;
+            }
           }
           return null;
         } catch (error) {
@@ -215,10 +259,94 @@ export async function getRecentTransactions(address, limit = 10) {
       })
     );
     
-    return transactions.filter(tx => tx !== null);
+    const validTransactions = transactions.filter(tx => tx !== null);
+    logger.info(`Found ${validTransactions.length} valid transactions out of ${signatures.length} total`);
+    
+    // Sort by blockTime descending and limit to requested amount
+    return validTransactions
+      .sort((a, b) => (b.blockTime || 0) - (a.blockTime || 0))
+      .slice(0, limit);
   } catch (error) {
     logger.error(`Error getting recent transactions for ${address}:`, error);
     throw new Error(`Failed to get recent transactions: ${error.message}`);
+  }
+}
+
+/**
+ * Extract SOL transfer from any transaction type
+ * @param {Object} transaction - Transaction object from Solana
+ * @param {string} targetAddress - Address to check for transfers
+ * @returns {Object|null} Transfer info or null if not a transfer
+ */
+function extractSOLTransfer(transaction, address) {
+  try {
+    if (!transaction || !transaction.meta || transaction.meta.err) {
+      return null;
+    }
+    
+    const message = transaction.transaction.message;
+    const accountKeys = message.accountKeys;
+    const targetAddress = address;
+    
+    // Find the account index for the target address
+    const targetIndex = accountKeys.findIndex(key => key.toBase58() === targetAddress);
+    if (targetIndex === -1) {
+      return null;
+    }
+    
+    // Calculate balance changes
+    const preBalance = transaction.meta.preBalances[targetIndex];
+    const postBalance = transaction.meta.postBalances[targetIndex];
+    const deltaLamports = postBalance - preBalance;
+    
+    // Only process if there's a positive balance change (incoming SOL)
+    if (deltaLamports <= 0) {
+      return null;
+    }
+    
+    const solAmount = deltaLamports / LAMPORTS_PER_SOL;
+    
+    // Find any account that lost SOL (potential sender)
+    let senderAddress = 'Unknown';
+    for (let i = 0; i < accountKeys.length; i++) {
+      if (i !== targetIndex && i < transaction.meta.preBalances.length) {
+        const preBalance = transaction.meta.preBalances[i];
+        const postBalance = transaction.meta.postBalances[i];
+        if (postBalance < preBalance) {
+          senderAddress = accountKeys[i].toBase58();
+          break;
+        }
+      }
+    }
+    
+    // If no clear sender found, use the first account that's not the target
+    if (senderAddress === 'Unknown') {
+      for (let i = 0; i < accountKeys.length; i++) {
+        if (i !== targetIndex && i < transaction.meta.preBalances.length) {
+          senderAddress = accountKeys[i].toBase58();
+          break;
+        }
+      }
+    }
+    
+    const fee = transaction.meta.fee / LAMPORTS_PER_SOL;
+    
+    return {
+      signature: transaction.transaction.signatures[0],
+      fromAddress: senderAddress,
+      toAddress: targetAddress,
+      amountSOL: solAmount,
+      direction: 'IN',
+      fee,
+      blockTime: transaction.blockTime,
+      slot: transaction.slot,
+      type: 'SOL_TRANSFER',
+      preBalance: preBalance / LAMPORTS_PER_SOL,
+      postBalance: postBalance / LAMPORTS_PER_SOL
+    };
+  } catch (error) {
+    logger.error('Error extracting SOL transfer:', error);
+    return null;
   }
 }
 

@@ -161,69 +161,78 @@ const TransactionsTable = ({ transactions = [], onRefresh }) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-white/10">
-          {sortedTransactions.map((transaction) => (
-            <tr key={transaction.signature} className="bg-white/0">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                <div>
-                  <div className="text-sm font-medium text-white">
-                    {new Date(transaction.blockTime).toLocaleDateString()}
-                  </div>
-                  <div className="text-sm text-white/60">
-                    {formatRelativeTime(transaction.blockTime)}
-                  </div>
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </div>
+          {transactions.map((transaction, index) => (
+            <tr key={transaction.id || transaction.signature || index} className="text-sm">
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-2 h-2 rounded-full ${transaction.direction === 'IN' ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   <div>
-                    <div className="text-sm font-medium text-white">
-                      {formatAddress(transaction.fromAddress)}
-                    </div>
-                    <div className="text-sm text-white/60">
-                      {transaction.fromAddress}
-                    </div>
+                    <p className="text-white font-medium">
+                      {transaction.direction === 'IN' ? 'Received' : 'Sent'}
+                    </p>
+                    <p className="text-white/60 text-xs">
+                      {transaction.source === 'onchain' ? 'On-chain' : 'Database'}
+                    </p>
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-white">
-                      {formatAddress(transaction.toAddress)}
-                    </div>
-                    <div className="text-sm text-white/60">
-                      {transaction.toAddress}
-                    </div>
-                  </div>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-white font-medium">
+                  {formatSOL(transaction.amountSOL || transaction.amount)}
                 </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                <div>
-                  <div className="text-sm font-medium text-white">
-                    {formatSOL(transaction.amount)}
-                  </div>
-                  <div className="text-sm text-white/60">
+                {transaction.amountUSD && (
+                  <div className="text-white/60 text-xs">
                     {formatUSD(transaction.amountUSD)}
                   </div>
+                )}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-white/90 font-mono text-xs">
+                  {formatAddress(transaction.fromAddress)}
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                {getStatusBadge(transaction.status)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                <div className="text-sm text-white/70 font-mono">
-                  {formatAddress(transaction.signature, 8, 8)}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-white/90 font-mono text-xs">
+                  {formatAddress(transaction.toAddress)}
                 </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-white/60 text-xs">
+                  {transaction.signature ? (
+                    <a 
+                      href={`https://explorer.solana.com/tx/${transaction.signature}?cluster=devnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white transition-colors"
+                    >
+                      {transaction.signature.slice(0, 8)}...
+                    </a>
+                  ) : (
+                    'N/A'
+                  )}
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-white/60 text-xs">
+                  {transaction.blockTime ? (
+                    new Date(transaction.blockTime * 1000).toLocaleString()
+                  ) : transaction.timestamp ? (
+                    new Date(transaction.timestamp).toLocaleString()
+                  ) : (
+                    'N/A'
+                  )}
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  transaction.status === 'confirmed' || transaction.status === 'CONFIRMED'
+                    ? 'bg-green-500/20 text-green-400'
+                    : transaction.status === 'pending' || transaction.status === 'PENDING'
+                    ? 'bg-yellow-500/20 text-yellow-400'
+                    : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {transaction.status?.toLowerCase() || 'unknown'}
+                </span>
               </td>
             </tr>
           ))}

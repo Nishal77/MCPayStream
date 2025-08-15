@@ -65,8 +65,9 @@ export const WalletProvider = ({ children }) => {
       // Add new transaction to the list
       setTransactions(prev => [data, ...prev]);
       
-      // Refresh wallet data to get updated balance
+      // Refresh wallet data to get updated balance and stats
       if (wallet?.address) {
+        console.log('Refreshing wallet data due to new transaction');
         fetchWallet(wallet.address);
       }
     });
@@ -238,7 +239,12 @@ export const WalletProvider = ({ children }) => {
       
       const data = await response.json();
       const payload = data.data || data.message || data;
-      setTransactions(payload.transactions || []);
+      const transactionList = payload.transactions || [];
+      
+      console.log('Raw transaction API response:', data);
+      console.log('Processed transactions:', transactionList);
+      
+      setTransactions(transactionList);
       
     } catch (err) {
       console.error('Error fetching transactions:', err);

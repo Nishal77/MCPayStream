@@ -136,34 +136,145 @@ npm run dev
 
 Visit: http://localhost:5173 (or the port Vite assigns)
 
-## 🧪 Devnet Testing Setup
+## 🧪 Solana Devnet Testing Setup
 
-### Generate Test Wallet
+### Install Solana CLI
+
+```bash
+# Install Solana CLI
+sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
+
+# Restart terminal or reload shell
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+### Configure Solana for Devnet
+
+```bash
+# Switch to Devnet
+solana config set --url https://api.devnet.solana.com
+
+# Verify configuration
+solana config get
+```
+
+### Generate Test Wallets
+
+#### Method 1: Using Solana CLI (Recommended)
+
+```bash
+# Generate main test wallet
+solana-keygen new --outfile ~/.config/solana/mcpaystream.json --no-bip39-passphrase
+
+# Generate additional sender wallet
+solana-keygen new --outfile ~/.config/solana/sender.json --no-bip39-passphrase
+
+# Generate random test wallet
+solana-keygen new --outfile ~/.config/solana/random1.json --no-bip39-passphrase
+```
+
+#### Method 2: Using Our Backend Script
 
 ```bash
 cd backend
 npm run devnet:keypair
 ```
 
-This creates `~/.config/solana/mcpaystream.json` and displays your wallet address.
+### Get Test SOL (Airdrop)
 
-### Get Test SOL
+#### Method 1: Solana CLI Airdrop
+
+```bash
+# Airdrop to main wallet
+solana airdrop 2 -k ~/.config/solana/mcpaystream.json
+
+# Airdrop to sender wallet
+solana airdrop 1 -k ~/.config/solana/sender.json
+
+# Airdrop to random wallet
+solana airdrop 1 -k ~/.config/solana/random1.json
+```
+
+#### Method 2: Web Faucet (If CLI rate limited)
 
 Visit [Solana Devnet Faucet](https://faucet.solana.com) and enter your wallet address.
 
-### Test Commands
+### View Wallet Information
 
 ```bash
+# View wallet address
+solana address -k ~/.config/solana/mcpaystream.json
+solana address -k ~/.config/solana/sender.json
+
+# Check wallet balance
+solana balance -k ~/.config/solana/mcpaystream.json
+solana balance -k ~/.config/solana/sender.json
+
+# Check any wallet balance (without keypair)
+solana balance AWnVcuqiHSXxe4vLZVBxHPhKc6kzZWaCBTAvBqY5iDeQ
+```
+
+### Send SOL Transactions
+
+#### Send to Specific Address
+
+```bash
+# Send 0.5 SOL to a specific address
+solana transfer AWnVcuqiHSXxe4vLZVBxHPhKc6kzZWaCBTAvBqY5iDeQ 0.5 -k ~/.config/solana/mcpaystream.json
+
+# Send 0.3 SOL to another address
+solana transfer 9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g 0.3 -k ~/.config/solana/mcpaystream.json
+
+# Send from sender wallet to main wallet
+solana transfer AWnVcuqiHSXxe4vLZVBxHPhKc6kzZWaCBTAvBqY5iDeQ 0.2 -k ~/.config/solana/sender.json
+```
+
+#### Send to Random Addresses
+
+```bash
+# Send to random address 1
+solana transfer 9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g 0.1 -k ~/.config/solana/mcpaystream.json
+
+# Send to random address 2
+solana transfer 56UjHEdHADpgc4Eqdzbk2HEVxpQQ2tdCwGptYAgTfXGe 0.2 -k ~/.config/solana/mcpaystream.json
+
+# Send to random address 3
+solana transfer D8FL9VwTjXgyLfvGwEZNyxUxyCTPXzcVnjhWPAZcgsS9 0.3 -k ~/.config/solana/mcpaystream.json
+```
+
+#### Self-Transfer (Send to Yourself)
+
+```bash
+# Send to your own wallet (self-transfer)
+solana transfer AWnVcuqiHSXxe4vLZVBxHPhKc6kzZWaCBTAvBqY5iDeQ 0.1 -k ~/.config/solana/mcpaystream.json
+```
+
+### View Transaction History
+
+```bash
+# View transaction history for a wallet
+solana transaction-history AWnVcuqiHSXxe4vLZVBxHPhKc6kzZWaCBTAvBqY5iDeQ -k ~/.config/solana/mcpaystream.json
+
+# Confirm a specific transaction
+solana confirm -v 5xb8GeKpiaHS6TpLYPWjhhDCgdVbGAfpnCsPK1deUtxHbf2S4B2LdNzFnNgNk6kEKqaG5eb5bsaxC8zp61aH92ef
+```
+
+### Backend Devnet Commands
+
+```bash
+cd backend
+
+# Generate keypair using our script
+npm run devnet:keypair
+
 # View wallet address
 npm run devnet:address
 
 # Check balance
 npm run devnet:balance
 
-# Solana CLI commands
-solana address -k ~/.config/solana/mcpaystream.json
-solana balance -k ~/.config/solana/mcpaystream.json
-solana transfer <RECIPIENT> 0.1 -k ~/.config/solana/mcpaystream.json
+# Send SOL (if you have our send script)
+node test/send.mjs <RECIPIENT_ADDRESS> <AMOUNT>
 ```
 
 ## 📊 Usage
@@ -287,6 +398,16 @@ npm run build
    - Verify Socket.IO server is running
    - Check for firewall/network issues
 
+5. **Airdrop Rate Limited**
+   - Use web faucet: https://faucet.solana.com
+   - Wait a few minutes between airdrops
+   - Try smaller amounts (0.5 SOL instead of 2 SOL)
+
+6. **Transaction Not Appearing**
+   - Check if transaction is incoming (not outgoing)
+   - Verify wallet address is correct
+   - Check transaction status with `solana confirm`
+
 ### Debug Mode
 
 ```bash
@@ -307,6 +428,7 @@ npm run dev
 ### Transactions
 - `GET /api/transactions/:address` - Get transactions
 - `GET /api/transactions/:address/stats` - Get transaction stats
+- `POST /api/transactions/refresh/:address` - Refresh transactions
 
 ### Analytics
 - `GET /api/stats/earnings/:address` - Get earnings data
@@ -318,6 +440,41 @@ npm run dev
 - `balance-update` - Balance changed
 - `earnings-update` - Earnings updated
 - `leaderboard-update` - Leaderboard changed
+
+## 🎯 Quick Command Reference
+
+### Essential Commands
+
+```bash
+# Setup
+solana config set --url https://api.devnet.solana.com
+solana-keygen new --outfile ~/.config/solana/mcpaystream.json --no-bip39-passphrase
+
+# Get SOL
+solana airdrop 2 -k ~/.config/solana/mcpaystream.json
+
+# Check balance
+solana balance -k ~/.config/solana/mcpaystream.json
+
+# Send SOL
+solana transfer <RECIPIENT> <AMOUNT> -k ~/.config/solana/mcpaystream.json
+
+# View address
+solana address -k ~/.config/solana/mcpaystream.json
+```
+
+### Testing Commands
+
+```bash
+# Generate sender wallet
+solana-keygen new --outfile ~/.config/solana/sender.json --no-bip39-passphrase
+
+# Send from sender to main wallet
+solana transfer <MAIN_WALLET_ADDRESS> 0.5 -k ~/.config/solana/sender.json
+
+# Check transaction
+solana confirm -v <TRANSACTION_SIGNATURE>
+```
 
 ## 🤝 Contributing
 

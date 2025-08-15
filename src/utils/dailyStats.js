@@ -16,15 +16,28 @@ export const calculateDailyReceived = (transactions = [], days = 1) => {
 
   // Filter transactions for the specified period and only incoming transactions
   const dailyTransactions = transactions.filter(tx => {
-    const txDate = new Date(tx.timestamp || tx.blockTime * 1000);
+    // Handle different timestamp formats from backend
+    let txDate;
+    if (tx.blockTime) {
+      // On-chain transaction timestamp (Unix timestamp in seconds)
+      txDate = new Date(tx.blockTime * 1000);
+    } else if (tx.timestamp) {
+      // Database transaction timestamp
+      txDate = new Date(tx.timestamp);
+    } else {
+      return false; // Skip transactions without timestamp
+    }
+    
     return txDate >= startDate && 
            txDate <= now && 
-           (tx.direction === 'IN' || tx.receiverAddress === tx.toAddress);
+           (tx.direction === 'IN' || tx.toAddress === tx.receiverAddress);
   });
 
   // Calculate total amount and count
   const totalAmount = dailyTransactions.reduce((sum, tx) => {
-    return sum + (tx.amountSOL || tx.amount || 0);
+    // Handle different amount field names
+    const amount = tx.amountSOL || tx.amount || 0;
+    return sum + amount;
   }, 0);
 
   return {

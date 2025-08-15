@@ -12,7 +12,7 @@ class RealTimeService {
     this.monitoredWallets = new Set();
     this.monitoringInterval = null;
     this.lastTransactionHashes = new Map(); // Track last known transaction for each wallet
-    this.updateInterval = 10000; // Check for updates every 10 seconds
+    this.updateInterval = 5000; // Check for updates every 5 seconds (more frequent)
   }
 
   /**
@@ -85,16 +85,27 @@ class RealTimeService {
   async checkWalletUpdates(walletAddress) {
     try {
       // Get recent transactions
-      const recentTxs = await getRecentTransactions(walletAddress, 5);
+      const recentTxs = await getRecentTransactions(walletAddress, 10);
       const lastKnownHash = this.lastTransactionHashes.get(walletAddress);
+      
+      logger.info(`Checking updates for wallet ${walletAddress}: ${recentTxs.length} recent transactions`);
       
       // Check for new transactions
       const newTransactions = recentTxs.filter(tx => {
-        if (!lastKnownHash) return true; // First time monitoring
-        return tx.signature !== lastKnownHash;
+        if (!lastKnownHash) {
+          logger.info(`First time monitoring ${walletAddress}, considering all ${recentTxs.length} transactions as new`);
+          return true; // First time monitoring
+        }
+        const isNew = tx.signature !== lastKnownHash;
+        if (isNew) {
+          logger.info(`New transaction detected: ${tx.signature} - ${tx.amountSOL} SOL`);
+        }
+        return isNew;
       });
 
       if (newTransactions.length > 0) {
+        logger.info(`Found ${newTransactions.length} new transactions for ${walletAddress}`);
+        
         // Update last known transaction hash
         this.lastTransactionHashes.set(walletAddress, recentTxs[0].signature);
         

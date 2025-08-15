@@ -1,27 +1,25 @@
-import express from 'express';
-import { query, param, validationResult } from 'express-validator';
+import { Router } from 'express';
 import { 
-  getCreatorTransactions,
-  getTransaction,
+  getCreatorTransactions, 
+  getTransaction, 
   getTransactionByHashController,
   getTransactionStatsController,
   exportTransactions,
-  updateTransactionStatusController,
-  getRecentTransactionsController,
-  getTransactionsByAddressController
+  refreshCreatorTransactions
 } from '../controllers/transactionController.js';
-import logger from '../utils/logger.js';
+import { param } from 'express-validator';
 
-const router = express.Router();
-
-// Validation middleware
-const validateAddress = param('address').isString().isLength({ min: 32, max: 44 });
+const router = Router();
 
 // Get transactions for a creator
-router.get('/creator/:address', 
-  validateAddress,
-  getCreatorTransactions
-);
+router.get('/creator/:address', [
+  param('address').isString().notEmpty(),
+], getCreatorTransactions);
+
+// Force refresh transactions for a creator
+router.post('/refresh/:address', [
+  param('address').isString().notEmpty(),
+], refreshCreatorTransactions);
 
 // Get transaction by ID
 router.get('/:id', getTransaction);
@@ -29,33 +27,10 @@ router.get('/:id', getTransaction);
 // Get transaction by hash
 router.get('/hash/:hash', getTransactionByHashController);
 
-// Get transaction statistics for a creator
-router.get('/stats/:address',
-  validateAddress,
-  getTransactionStatsController
-);
+// Get transaction statistics
+router.get('/stats/:address', getTransactionStatsController);
 
 // Export transactions
-router.get('/export/:address',
-  validateAddress,
-  exportTransactions
-);
-
-// Update transaction status
-router.patch('/:id/status',
-  [
-    query('status').isIn(['PENDING', 'CONFIRMED', 'FAILED']),
-  ],
-  updateTransactionStatusController
-);
-
-// Get recent transactions
-router.get('/recent', getRecentTransactionsController);
-
-// Get transactions by address (sender or receiver)
-router.get('/address/:address',
-  validateAddress,
-  getTransactionsByAddressController
-);
+router.get('/export/:address', exportTransactions);
 
 export default router;

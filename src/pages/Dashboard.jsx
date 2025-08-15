@@ -42,6 +42,10 @@ const Dashboard = () => {
     if (transactions.length > 0) {
       setIsLive(true);
       setLastUpdate(new Date().toISOString());
+      
+      // Debug: Log transaction data
+      console.log('Transactions updated:', transactions);
+      console.log('Daily received calculation:', calculateTodayReceived(transactions));
     }
   }, [transactions]);
 
@@ -56,7 +60,11 @@ const Dashboard = () => {
   };
 
   const handleRefresh = () => {
-    refreshWallet();
+    if (wallet?.address) {
+      console.log('Manual refresh triggered');
+      fetchWallet(wallet.address);
+      fetchTransactions();
+    }
   };
 
   const handleChangeWallet = () => {
@@ -88,7 +96,7 @@ const Dashboard = () => {
                   <Wallet className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  <h1 className="text-xl font-bold text-white">
                     MCPayStream
                   </h1>
                   <p className="text-sm text-white/60">Live Blockchain Analytics</p>
@@ -98,16 +106,24 @@ const Dashboard = () => {
               <div className="flex items-center space-x-3">
                 {/* Real-time Status */}
                 {wallet && (
-                  <div className="flex items-center space-x-2 px-3 py-2 bg-green-500/20 rounded-lg border border-green-500/30">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span className="text-sm text-green-400 font-medium">
-                      Live Updates
-                    </span>
-                    {lastUpdate && (
-                      <span className="text-xs text-green-300">
-                        {new Date(lastUpdate).toLocaleTimeString()}
+                  <div className="flex items-center justify-between px-3 py-2 bg-green-500/20 rounded-lg border border-green-500/30">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                      <span className="text-sm text-green-400 font-medium">
+                        Live Updates
                       </span>
-                    )}
+                      {lastUpdate && (
+                        <span className="text-xs text-green-300">
+                          {new Date(lastUpdate).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleRefresh}
+                      className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs rounded-lg border border-green-500/30 transition-all"
+                    >
+                      Refresh Data
+                    </button>
                   </div>
                 )}
                 
@@ -191,9 +207,6 @@ const Dashboard = () => {
                   {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} • Auto-updating
                 </span>
               </div>
-              <p className="text-sm text-green-300 mt-1">
-                New transactions will appear automatically without refreshing the page
-              </p>
             </div>
           )}
 
@@ -241,7 +254,7 @@ const Dashboard = () => {
                   <button
                     type="submit"
                     disabled={!walletAddress.trim() || isLoading}
-                    className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="w-full py-3 px-6 bg-white text-black font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center space-x-2">
@@ -276,7 +289,7 @@ const Dashboard = () => {
                 />
                 <WalletCard
                   title="Total Received"
-                  value={formatSOL(wallet.totalEarnings || 0)}
+                  value={formatSOL(wallet.stats?.totalReceived || wallet.totalEarnings || 0)}
                   change="All time earnings"
                   icon={TrendingUp}
                 />
@@ -295,7 +308,7 @@ const Dashboard = () => {
                 <WalletCard
                   title="Transactions"
                   value={transactions.length.toString()}
-                  change={`${transactions.filter(tx => tx.status === 'CONFIRMED').length} confirmed`}
+                  change={`${transactions.filter(tx => tx.status === 'confirmed').length} confirmed`}
                   icon={Users}
                 />
               </div>

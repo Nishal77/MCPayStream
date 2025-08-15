@@ -88,10 +88,12 @@ export const getCreatorTransactions = async (req, res) => {
       const existingSignatures = new Set(dbNormalized.map((x) => x.signature).filter(Boolean));
       const newTransactions = chainNormalized.filter((x) => !existingSignatures.has(x.signature));
       
+      logger.info(`Found ${newTransactions.length} new on-chain transactions to save`);
+      
       // Save new transactions to database
       for (const tx of newTransactions) {
         try {
-          await createTransaction({
+          const savedTx = await createTransaction({
             txHash: tx.signature,
             senderAddress: tx.fromAddress,
             receiverAddress: tx.toAddress,
@@ -101,7 +103,26 @@ export const getCreatorTransactions = async (req, res) => {
             creatorId: creator.id,
             timestamp: tx.blockTime ? new Date(tx.blockTime) : new Date(),
           });
-          logger.info(`Saved on-chain transaction to DB: ${tx.signature}`);
+          logger.info(`Saved on-chain transaction to DB: ${tx.signature} - ${tx.amount} SOL`);
+          
+          // Emit real-time update for this new transaction
+          try {
+            const { emitTransactionUpdate } = await import('../socket.js');
+            emitTransactionUpdate(address, {
+              id: savedTx.id,
+              signature: tx.signature,
+              fromAddress: tx.fromAddress,
+              toAddress: tx.toAddress,
+              amount: tx.amount,
+              amountUSD: tx.amountUSD,
+              status: 'confirmed',
+              blockTime: tx.blockTime,
+              source: 'onchain',
+              direction: 'IN'
+            });
+          } catch (socketError) {
+            logger.warn('Failed to emit transaction update:', socketError);
+          }
         } catch (error) {
           logger.error(`Failed to save transaction ${tx.signature}:`, error);
           // Continue with other transactions
@@ -301,5 +322,102 @@ export const getTransactionsByAddressController = async (req, res) => {
   } catch (error) {
     logger.error('Error getting transactions by address:', error);
     res.status(500).json(formatApiError('Failed to get transactions', error.message));
+  }
+};
+
+/**
+ * Force refresh transactions for a creator
+ */
+export const refreshCreatorTransactions = async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    const creator = await getCreatorBySolanaAddress(address);
+    if (!creator) {
+      return res.status(404).json(formatApiError('Creator not found'));
+    }
+
+    logger.info(`Manual refresh requested for wallet: ${address}`);
+
+    // Force fetch new on-chain transactions
+    const [chainTxs, solPrice] = await Promise.all([
+      getOnChainRecent(address, 50), // Fetch more transactions
+      getCachedSolPrice(),
+    ]);
+
+    const chainNormalized = chainTxs
+      .filter(tx => tx.direction === 'IN') // Only incoming transactions
+      .map((t) => ({
+        id: `onchain-${t.signature}`,
+        signature: t.signature,
+        fromAddress: t.fromAddress,
+        toAddress: t.toAddress,
+        amount: t.amountSOL,
+        amountUSD: t.amountSOL * (solPrice || 0),
+        status: 'confirmed',
+        blockTime: t.blockTime ? t.blockTime * 1000 : undefined,
+        source: 'onchain',
+        direction: 'IN'
+      }));
+
+    // Get existing database transactions
+    const existingTxs = await getTransactionsByCreator(creator.id, { limit: 100 });
+    const existingSignatures = new Set(existingTxs.transactions.map((x) => x.txHash).filter(Boolean));
+    
+    // Find new transactions
+    const newTransactions = chainNormalized.filter((x) => !existingSignatures.has(x.signature));
+    
+    logger.info(`Found ${newTransactions.length} new transactions to save`);
+
+    // Save new transactions to database
+    for (const tx of newTransactions) {
+      try {
+        const savedTx = await createTransaction({
+          txHash: tx.signature,
+          senderAddress: tx.fromAddress,
+          receiverAddress: tx.toAddress,
+          amountSOL: tx.amount,
+          usdValue: tx.amountUSD,
+          status: 'CONFIRMED',
+          creatorId: creator.id,
+          timestamp: tx.blockTime ? new Date(tx.blockTime) : new Date(),
+        });
+        logger.info(`Saved new transaction: ${tx.signature} - ${tx.amount} SOL`);
+      } catch (error) {
+        logger.error(`Failed to save transaction ${tx.signature}:`, error);
+      }
+    }
+
+    // Get updated transaction list
+    const result = await getTransactionsByCreator(creator.id, { limit: 50 });
+    
+    // Normalize DB transactions
+    const dbNormalized = result.transactions
+      .filter(tx => tx.receiverAddress === address)
+      .map((tx) => ({
+        id: tx.id,
+        signature: tx.txHash,
+        fromAddress: tx.senderAddress,
+        toAddress: tx.receiverAddress,
+        amount: tx.amountSOL,
+        amountUSD: tx.usdValue,
+        status: (tx.status || 'CONFIRMED').toLowerCase(),
+        blockTime: tx.timestamp ? new Date(tx.timestamp).getTime() : undefined,
+        source: 'db',
+        direction: 'IN'
+      }));
+
+    // Merge and sort
+    const merged = [...dbNormalized];
+    merged.sort((a, b) => (b.blockTime || 0) - (a.blockTime || 0));
+
+    res.json(formatApiResponse({
+      transactions: merged,
+      newTransactionsCount: newTransactions.length,
+      totalTransactions: merged.length,
+    }, `Transactions refreshed successfully. Found ${newTransactions.length} new transactions.`));
+  } catch (error) {
+    logger.error('Error refreshing transactions:', error);
+    res.status(500).json(formatApiError('Failed to refresh transactions', error.message));
   }
 };
