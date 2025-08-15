@@ -101,7 +101,7 @@ const TransactionsTable = ({ transactions = [], onRefresh }) => {
             </div>
             <button
               onClick={onRefresh}
-              className="p-2 text-white/70 hover:text-white transition-colors"
+                                        className="p-2 text-white/70 transition-colors"
               title="Refresh transactions"
             >
               <RefreshCw className="w-4 h-4" />

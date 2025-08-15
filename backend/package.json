@@ -12,11 +12,10 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "node scripts/seedDemoData.js",
     "devnet:setup": "./setup-devnet.sh",
     "devnet:keypair": "node scripts/generate-devnet-keypair.js",
-    "devnet:address": "node -e \"const fs = require('fs'); const path = require('path'); const keypairPath = path.join(require('os').homedir(), '.config', 'solana', 'mcpaystream.json'); try { const data = JSON.parse(fs.readFileSync(keypairPath, 'utf8')); console.log('🔑 Devnet Wallet Address:', data.publicKey); } catch (e) { console.log('❌ No keypair found. Run: npm run devnet:keypair'); }\"",
-    "devnet:balance": "node -e \"const fs = require('fs'); const path = require('path'); const keypairPath = path.join(require('os').homedir(), '.config', 'solana', 'mcpaystream.json'); try { const data = JSON.parse(fs.readFileSync(keypairPath, 'utf8')); console.log('🔑 Wallet Address:', data.publicKey); console.log('💡 Check balance at: https://explorer.solana.com/address/' + data.publicKey + '?cluster=devnet'); } catch (e) { console.log('❌ No keypair found. Run: npm run devnet:keypair'); }\""
+    "devnet:address": "node -e \"const fs = require('fs'); const path = require('path'); const keypairPath = path.join(require('os').homedir(), '.config', 'solana', 'mcpaystream.json'); try { const data = JSON.parse(fs.readFileSync(keypairPath, 'utf8')); const { Keypair } = require('@solana/web3.js'); const kp = Keypair.fromSecretKey(new Uint8Array(data)); console.log('🔑 Devnet Wallet Address:', kp.publicKey.toString()); } catch (e) { console.log('❌ No keypair found. Run: npm run devnet:keypair'); }\"",
+    "devnet:balance": "node -e \"const fs = require('fs'); const path = require('path'); const keypairPath = path.join(require('os').homedir(), '.config', 'solana', 'mcpaystream.json'); try { const data = JSON.parse(fs.readFileSync(keypairPath, 'utf8')); const { Keypair } = require('@solana/web3.js'); const kp = Keypair.fromSecretKey(new Uint8Array(data)); console.log('🔑 Wallet Address:', kp.publicKey.toString()); console.log('💡 Check balance at: https://explorer.solana.com/address/' + kp.publicKey.toString() + '?cluster=devnet'); } catch (e) { console.log('❌ No keypair found. Run: npm run devnet:keypair'); }\""
   },
   "keywords": [
     "solana",

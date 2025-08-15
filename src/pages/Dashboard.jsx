@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useWallet } from '../context/WalletContext.jsx';
-import { useTheme } from '../context/ThemeContext.jsx';
-import { Sun, Moon, Settings, TrendingUp, Users, Activity, Wallet } from 'lucide-react';
-import WalletCard from '../components/WalletCard.jsx';
-import TransactionsTable from '../components/TransactionsTable.jsx';
-import EarningsChart from '../components/EarningsChart.jsx';
-import Leaderboard from '../components/Leaderboard.jsx';
-import LoadingScreen from '../components/LoadingScreen.jsx';
-import { formatSOL, formatUSD } from '../../shared/formatters';
+import { useWallet } from '../context/WalletContext';
+import { useTheme } from '../context/ThemeContext';
+import { Sun, Moon, Settings, TrendingUp, Users, Activity, Wallet, RefreshCw } from 'lucide-react';
+import WalletCard from '../components/WalletCard';
+import TransactionsTable from '../components/TransactionsTable';
+import EarningsChart from '../components/EarningsChart';
+import Leaderboard from '../components/Leaderboard';
+import LoadingScreen from '../components/LoadingScreen';
+import { formatSOL, formatUSD, formatAddress } from '../../shared/formatters';
+import { calculateTodayReceived, formatDailyStats } from '../utils/dailyStats';
 
 const Dashboard = () => {
   const { isDark, toggleTheme } = useTheme();
@@ -83,7 +84,7 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               {/* Logo and Title */}
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg transition-transform hover:rotate-12 duration-300">
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg transition-transform duration-300">
                   <Wallet className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -122,14 +123,14 @@ const Dashboard = () => {
                 {wallet && (
                   <button 
                     onClick={handleChangeWallet}
-                    className="px-4 py-2 bg-white/10 text-white text-sm font-medium rounded-lg border border-white/10 hover:bg-white/20 transition-all"
+                    className="px-4 py-2 bg-white/10 text-white text-sm font-medium rounded-lg border border-white/10 transition-all"
                   >
                     Change Wallet
                   </button>
                 )}
                 
                 {/* Theme Toggle */}
-                <button onClick={toggleTheme} className="p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all" aria-label="Toggle theme">
+                <button onClick={toggleTheme} className="p-3 rounded-xl bg-white/10 transition-all" aria-label="Toggle theme">
                   {isDark ? (
                     <Sun className="w-5 h-5 text-yellow-500" />
                   ) : (
@@ -138,7 +139,7 @@ const Dashboard = () => {
                 </button>
                 
                 {/* Settings */}
-                <a href="/settings" className="p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all" aria-label="Settings">
+                <a href="/settings" className="p-3 rounded-xl bg-white/10 transition-all" aria-label="Settings">
                   <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </a>
               </div>
@@ -166,7 +167,7 @@ const Dashboard = () => {
                       </p>
                       <ul className="text-red-300 text-xs mt-1 ml-4 list-disc">
                         <li>Wait a few minutes before trying again</li>
-                        <li>Use the web faucet at <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-red-200">faucet.solana.com</a></li>
+                        <li>Use the web faucet at <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="underline">faucet.solana.com</a></li>
                         <li>Check if your wallet already has SOL</li>
                       </ul>
                     </div>
@@ -198,9 +199,9 @@ const Dashboard = () => {
 
           {/* Wallet Input */}
           {showWalletInput && (
-            <div className="max-w-md mx-auto p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-300">
+                            <div className="max-w-md mx-auto p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm transition-all duration-300">
               <div className="text-center space-y-6">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl w-fit mx-auto transform hover:rotate-12 transition-all duration-300">
+                                  <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl w-fit mx-auto transform transition-all duration-300">
                   <Wallet className="w-8 h-8 text-white" />
                 </div>
                 
@@ -214,7 +215,7 @@ const Dashboard = () => {
                   <div className="mt-3 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
                     <p className="text-blue-300 text-xs">
                       <strong>Note:</strong> For testing, you can use any Solana wallet address. If you need test SOL, visit{' '}
-                      <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-200">
+                      <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="underline">
                         Solana Devnet Faucet
                       </a>
                     </p>
@@ -232,7 +233,7 @@ const Dashboard = () => {
                       value={walletAddress}
                       onChange={(e) => setWalletAddress(e.target.value)}
                       placeholder="Enter wallet address (e.g., D8FL9VwTjXgyLfvGwEZNyxUxyCTPXzcVnjhWPAZcgsS9)"
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:bg-white/15 hover:border-white/30"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                       disabled={isLoading}
                     />
                   </div>
@@ -240,7 +241,7 @@ const Dashboard = () => {
                   <button
                     type="submit"
                     disabled={!walletAddress.trim() || isLoading}
-                    className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg hover:shadow-purple-500/25"
+                    className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center space-x-2">
@@ -266,11 +267,17 @@ const Dashboard = () => {
           {wallet && (
             <>
               {/* Wallet Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                <WalletCard
+                  title="Daily Received"
+                  value={formatSOL(calculateTodayReceived(transactions).amount)}
+                  change={formatDailyStats(calculateTodayReceived(transactions))}
+                  icon={TrendingUp}
+                />
                 <WalletCard
                   title="Total Received"
                   value={formatSOL(wallet.totalEarnings || 0)}
-                  change="+2.5% from last week"
+                  change="All time earnings"
                   icon={TrendingUp}
                 />
                 <WalletCard
@@ -295,14 +302,14 @@ const Dashboard = () => {
 
               {/* Charts and Analytics */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6 hover:bg-white/10 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+                <div className="bg-white/5 rounded-lg border border-white/10 p-6 transition-all duration-300">
                   <h3 className="text-lg font-semibold text-white mb-4">
                     Earnings Over Time
                   </h3>
                   <EarningsChart walletAddress={wallet.address} />
                 </div>
                 
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6 hover:bg-white/10 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+                <div className="bg-white/5 rounded-lg border border-white/10 p-6 transition-all duration-300">
                   <h3 className="text-lg font-semibold text-white mb-4">
                     Top Senders
                   </h3>
@@ -311,7 +318,7 @@ const Dashboard = () => {
               </div>
 
               {/* Transactions */}
-              <div className="bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+              <div className="bg-white/5 rounded-lg border border-white/10 transition-all duration-300">
                 <div className="p-6 border-b border-white/10">
                   <h3 className="text-lg font-semibold text-white">
                     Recent Transactions

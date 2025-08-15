@@ -1,328 +1,342 @@
-# MCPayStream
+# MCPayStream 🚀
 
-A modern, blockchain-powered payment tracking dashboard for content creators built with React, Node.js, and Solana.
+**Live Blockchain Analytics Platform for Solana**
 
-## 🚀 Features
+A real-time dashboard for monitoring Solana wallet transactions, earnings, and analytics with live blockchain data integration.
 
-- **Real-time Payment Tracking**: Monitor Solana transactions in real-time
-- **Live Dashboard**: Beautiful, responsive dashboard with live updates
-- **Blockchain Integration**: Direct integration with Solana blockchain
-- **QR Code Generation**: Generate QR codes for wallet addresses
-- **Export Functionality**: Export transaction data to CSV
-- **Dark/Light Theme**: Toggle between themes
-- **WebSocket Support**: Real-time updates via Socket.IO
-- **Responsive Design**: Mobile-first, modern UI built with Tailwind CSS
+## ✨ Features
+
+- **Live Blockchain Data** - Real-time SOL balance and transaction monitoring
+- **Daily Analytics** - Track daily SOL received and transaction counts
+- **Top Senders/Wallets** - See who's sending SOL and transaction details
+- **Earnings Charts** - Visualize earnings over time with live data
+- **Real-time Updates** - WebSocket-powered live updates without page refresh
+- **Devnet Testing** - Full Solana Devnet integration for testing
+- **Modern UI** - Sleek black theme with responsive design
 
 ## 🏗️ Architecture
 
-### Backend
-- **Node.js + Express**: RESTful API server
-- **MongoDB**: Database for storing transaction data
-- **Solana Web3.js**: Blockchain integration
-- **Socket.IO**: Real-time communication
-- **Winston**: Comprehensive logging
-- **CoinGecko API**: Live SOL price data
+- **Frontend**: React + Vite + Tailwind CSS
+- **Backend**: Node.js + Express + Socket.IO
+- **Database**: PostgreSQL with Prisma ORM
+- **Blockchain**: Solana Web3.js integration
+- **Real-time**: WebSocket connections for live updates
+- **Deployment**: Ready for production deployment
 
-### Frontend
-- **React 18**: Modern React with hooks
-- **Vite**: Fast build tool and dev server
-- **Tailwind CSS**: Utility-first CSS framework
-- **Recharts**: Beautiful, responsive charts
-- **Socket.IO Client**: Real-time updates
-- **Lucide React**: Beautiful icons
-
-## 📁 Project Structure
-
-```
-mcpaystream/
-├── backend/                    # Backend server
-│   ├── src/
-│   │   ├── config/            # Configuration files
-│   │   ├── blockchain/        # Solana integration
-│   │   ├── controllers/       # API controllers
-│   │   ├── models/            # Database models
-│   │   ├── routes/            # API routes
-│   │   ├── services/          # Business logic
-│   │   ├── utils/             # Utilities
-│   │   └── index.js           # Server entry point
-│   └── package.json
-├── src/                       # Frontend React app
-│   ├── components/            # Reusable components
-│   ├── pages/                 # Page components
-│   ├── context/               # React context
-│   ├── hooks/                 # Custom hooks
-│   ├── services/              # API services
-│   └── styles/                # Global styles
-├── shared/                    # Shared utilities
-├── docker-compose.yml         # Docker setup
-└── package.json
-```
-
-## 🛠️ Installation
+## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18+ 
-- MongoDB 7.0+
-- Docker & Docker Compose (optional)
+- PostgreSQL database
+- Solana CLI (optional, for testing)
 
-### Quick Start with Docker
+### 1. Clone & Install
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd mcpaystream
-   ```
+```bash
+git clone <your-repo-url>
+cd MCPayStream
 
-2. **Start all services**
-   ```bash
-   docker-compose up -d
-   ```
+# Install frontend dependencies
+npm install
 
-3. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
-   - MongoDB: localhost:27017
+# Install backend dependencies
+cd backend
+npm install
+cd ..
+```
 
-### Manual Installation
+### 2. Environment Setup
 
-1. **Install backend dependencies**
-   ```bash
-   cd backend
-   npm install
-   ```
+Copy the environment template and configure:
 
-2. **Install frontend dependencies**
-   ```bash
-   cd ..
-   npm install
-   ```
+```bash
+cd backend
+cp env.template .env
+```
 
-3. **Set up environment variables**
-   ```bash
-   cp backend/env.example backend/.env
-   # Edit backend/.env with your configuration
-   ```
-
-4. **Start MongoDB**
-   ```bash
-   # Start MongoDB service
-   ```
-
-5. **Start backend**
-   ```bash
-   cd backend
-   npm run dev
-   ```
-
-6. **Start frontend**
-   ```bash
-   cd ..
-   npm run dev
-   ```
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-Create a `.env` file in the backend directory:
+Update `.env` with your configuration:
 
 ```env
 # Server Configuration
 NODE_ENV=development
-PORT=5000
-JWT_SECRET=your-secret-key
+PORT=5001
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
 
-# MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/mcpaystream
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173
 
-# Solana Configuration
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
-SOLANA_WALLET_ADDRESS=your-wallet-address
+# Database Configuration (Supabase/PostgreSQL)
+DATABASE_URL="postgresql://postgres:password@localhost:5432/mcpaystream?schema=public"
+
+# Solana Configuration (Devnet)
+SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_WS_URL=wss://api.devnet.solana.com
+SOLANA_NETWORK=devnet
+SOLANA_KEYPAIR_PATH=~/.config/solana/mcpaystream.json
 
 # CoinGecko API
 COINGECKO_API_URL=https://api.coingecko.com/api/v3
-COINGECKO_API_KEY=your-api-key-optional
+COINGECKO_API_KEY=your-coingecko-api-key-optional
 
 # Webhook Configuration
-WEBHOOK_URL=your-webhook-url
-WEBHOOK_SECRET=your-webhook-secret
+WEBHOOK_URL=your-webhook-url-here
+WEBHOOK_SECRET=your-webhook-secret-here
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=logs/app.log
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
 ```
 
-## 🚀 Usage
+### 3. Database Setup
 
-1. **Default Phantom Wallet**: The dashboard comes pre-loaded with a Phantom wallet address: `9nGxKEUZkJAJAiaBZfvQVJPVvbpfndVjmPm5SBj5rHmr`
-2. **Load a Wallet**: Enter any Solana wallet address to start tracking
-3. **Monitor Transactions**: View real-time transaction updates
-4. **Analyze Earnings**: Use charts to analyze payment patterns
-5. **Export Data**: Download transaction data as CSV
-6. **Customize Settings**: Configure webhooks and preferences
+#### Option A: Supabase (Recommended)
 
-## 🧪 Devnet Testing (no real SOL needed)
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Get your database connection string
+3. Update `DATABASE_URL` in `.env`
+4. Run database migrations:
 
-Backend is Devnet-ready. Use the commands below to generate a keypair, airdrop test SOL, and send transactions. These work even if the Solana CLI is not installed.
-
-### Configure backend/.env
-```
-SOLANA_NETWORK=https://api.devnet.solana.com
-SOLANA_WALLET_KEYPAIR=~/.config/solana/mcpaystream.json
-```
-
-### From the backend folder
 ```bash
 cd backend
-
-# 1) Generate a test keypair (prints public key)
-npm run test:devnet:keypair
-
-# 2) Airdrop 2 SOL via RPC (may rate-limit with 429)
-npm run test:devnet:airdrop -- <ADDRESS>
-
-# 3) Send SOL without the CLI
-npm run test:devnet:send -- <RECIPIENT_ADDRESS> <AMOUNT_SOL>
-
-# 4) Helper: print your keypair address (JS)
-npm run test:devnet:address
-
-# 5) Helper: print balance for an address (JS)
-npm run test:devnet:balance -- <ADDRESS>
+npx prisma migrate deploy
+npx prisma generate
 ```
 
-If you want to use the Solana CLI (optional):
+#### Option B: Local PostgreSQL
+
 ```bash
-# macOS install (Homebrew)
-brew install solana
+# Install PostgreSQL locally
+brew install postgresql  # macOS
+sudo apt-get install postgresql  # Ubuntu
 
-# Or official installer
-sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
-export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+# Create database
+createdb mcpaystream
 
-# Point CLI to Devnet and your keypair
-solana config set --url https://api.devnet.solana.com
-solana config set -k ~/.config/solana/mcpaystream.json
-
-# Airdrop and transfer with CLI
-solana airdrop 2 <ADDRESS>
-solana transfer <RECIPIENT_ADDRESS> <AMOUNT_SOL> --allow-unfunded-recipient
-
-# Verify
-solana address
-solana balance <ADDRESS>
+# Run migrations
+cd backend
+npx prisma migrate deploy
+npx prisma generate
 ```
 
-Notes:
-- The public Devnet faucet can return 429. If so, retry later or use `https://faucet.solana.com`.
-- The dashboard transactions view merges DB and live on-chain results. You can force live on-chain fetch with:
-  - `GET /api/transactions/creator/:address?includeOnChain=true&onChainLimit=50`
+### 4. Start the Application
+
+```bash
+# Terminal 1: Start Backend
+cd backend
+npm run dev
+
+# Terminal 2: Start Frontend
+npm run dev
+```
+
+Visit: http://localhost:5173 (or the port Vite assigns)
+
+## 🧪 Devnet Testing Setup
+
+### Generate Test Wallet
+
+```bash
+cd backend
+npm run devnet:keypair
+```
+
+This creates `~/.config/solana/mcpaystream.json` and displays your wallet address.
+
+### Get Test SOL
+
+Visit [Solana Devnet Faucet](https://faucet.solana.com) and enter your wallet address.
+
+### Test Commands
+
+```bash
+# View wallet address
+npm run devnet:address
+
+# Check balance
+npm run devnet:balance
+
+# Solana CLI commands
+solana address -k ~/.config/solana/mcpaystream.json
+solana balance -k ~/.config/solana/mcpaystream.json
+solana transfer <RECIPIENT> 0.1 -k ~/.config/solana/mcpaystream.json
+```
+
+## 📊 Usage
+
+### 1. Enter Wallet Address
+
+- Input any Solana wallet address in the dashboard
+- The system will fetch live blockchain data
+- Real-time monitoring begins automatically
+
+### 2. View Analytics
+
+- **Daily Received**: Today's SOL received
+- **Total Received**: All-time earnings
+- **Current Balance**: Live wallet balance
+- **SOL Price**: Current market price
+- **Transactions**: Total transaction count
+
+### 3. Real-time Features
+
+- Live transaction updates via WebSocket
+- Automatic balance refresh
+- Real-time earnings chart updates
+- Live leaderboard updates
 
 ## 🔧 Development
 
-### Available Scripts
+### Project Structure
+
+```
+MCPayStream/
+├── src/                    # Frontend React app
+│   ├── components/        # React components
+│   ├── context/          # React context providers
+│   ├── pages/            # Page components
+│   └── utils/            # Utility functions
+├── backend/               # Node.js backend
+│   ├── src/              # Backend source code
+│   ├── prisma/           # Database schema & migrations
+│   ├── scripts/          # Utility scripts
+│   └── logs/             # Application logs
+├── shared/                # Shared utilities
+└── README.md             # This file
+```
+
+### Key Backend Files
+
+- `backend/src/index.js` - Express server setup
+- `backend/src/socket.js` - WebSocket configuration
+- `backend/src/controllers/` - API controllers
+- `backend/src/models/` - Database models
+- `backend/src/blockchain/` - Solana integration
+- `backend/src/services/` - Business logic services
+
+### Key Frontend Files
+
+- `src/pages/Dashboard.jsx` - Main dashboard
+- `src/context/WalletContext.jsx` - Wallet state management
+- `src/components/` - Reusable components
+- `src/utils/` - Utility functions
+
+### Database Schema
+
+The application uses Prisma with the following main models:
+
+- **Creator** - Wallet owners and their metadata
+- **Transaction** - All blockchain transactions
+- **Analytics** - Computed statistics and metrics
+
+## 🚀 Production Deployment
+
+### Environment Variables
+
+Update `.env` for production:
+
+```env
+NODE_ENV=production
+DATABASE_URL=your-production-postgresql-url
+JWT_SECRET=your-production-jwt-secret
+CORS_ORIGIN=your-frontend-domain
+```
+
+### Build Commands
 
 ```bash
 # Frontend
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run preview      # Preview production build
+npm run build
 
 # Backend
-npm run backend:dev  # Start backend in development mode
-npm run backend:start # Start backend in production mode
-
-# Full Stack
-npm run full:dev     # Start both frontend and backend
+cd backend
+npm run build
 ```
 
-### Code Quality
+### Deployment Options
+
+- **Vercel/Netlify** - Frontend deployment
+- **Railway/Render** - Backend deployment
+- **Supabase** - Database hosting
+- **Docker** - Containerized deployment
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **CORS Errors**
+   - Ensure `CORS_ORIGIN` matches your frontend URL
+   - Check backend is running on correct port
+
+2. **Database Connection**
+   - Verify `DATABASE_URL` is correct
+   - Ensure PostgreSQL is running
+   - Run `npx prisma migrate deploy`
+
+3. **Solana Connection**
+   - Check `SOLANA_RPC_URL` is accessible
+   - Verify network is set to `devnet`
+   - Test with `npm run devnet:balance`
+
+4. **Real-time Updates Not Working**
+   - Check WebSocket connection in browser console
+   - Verify Socket.IO server is running
+   - Check for firewall/network issues
+
+### Debug Mode
 
 ```bash
-npm run lint         # Run ESLint
-npm run test         # Run tests
+# Backend with debug logging
+cd backend
+LOG_LEVEL=debug npm run dev
+
+# Frontend with debug info
+npm run dev
 ```
 
-## 🐳 Docker
+## 📝 API Endpoints
 
-### Services
-
-- **Frontend**: React app served on port 3000
-- **Backend**: Node.js API server on port 5000
-- **MongoDB**: Database on port 27017
-
-### Commands
-
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-
-# Rebuild and restart
-docker-compose up -d --build
-```
-
-## 📊 API Endpoints
-
-### Wallet
-- `GET /api/wallet/:address` - Get wallet information
-- `PUT /api/wallet/:address` - Update wallet settings
+### Wallet Management
+- `GET /api/wallets/:address` - Get wallet data
+- `POST /api/wallets` - Create wallet
 
 ### Transactions
-- `GET /api/transactions` - Get transaction history
-- `GET /api/transactions/:id` - Get specific transaction
+- `GET /api/transactions/:address` - Get transactions
+- `GET /api/transactions/:address/stats` - Get transaction stats
 
-### Statistics
-- `GET /api/stats/earnings` - Get earnings statistics
-- `GET /api/stats/leaderboard` - Get top senders
+### Analytics
+- `GET /api/stats/earnings/:address` - Get earnings data
+- `GET /api/stats/top-senders` - Get top senders
+- `GET /api/stats/leaderboard` - Get leaderboard
 
-## 🔒 Security Features
-
-- **Rate Limiting**: API rate limiting to prevent abuse
-- **CORS Protection**: Configurable CORS settings
-- **Input Validation**: Comprehensive input validation
-- **Helmet**: Security headers
-- **Environment Variables**: Secure configuration management
-
-## 📈 Performance
-
-- **Real-time Updates**: WebSocket-based live updates
-- **Optimized Queries**: Efficient MongoDB queries with indexes
-- **Caching**: Redis caching for frequently accessed data
-- **Compression**: Gzip compression for API responses
+### Real-time Events
+- `transaction-update` - New transaction received
+- `balance-update` - Balance changed
+- `earnings-update` - Earnings updated
+- `leaderboard-update` - Leaderboard changed
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Test thoroughly
 5. Submit a pull request
 
-## 📝 License
+## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## 🆘 Support
 
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the code examples
-
-## 🔮 Roadmap
-
-- [ ] Multi-wallet support
-- [ ] Advanced analytics
-- [ ] Mobile app
-- [ ] Payment scheduling
-- [ ] Integration with other blockchains
-- [ ] Advanced webhook system
-- [ ] User authentication
-- [ ] Team collaboration features
+- **Issues**: Create a GitHub issue
+- **Documentation**: Check this README
+- **Community**: Join our Discord/Telegram
 
 ---
 
-Built with ❤️ for the Solana ecosystem
+**Built with ❤️ for the Solana ecosystem**

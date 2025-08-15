@@ -2,11 +2,11 @@
 
 import { Keypair } from '@solana/web3.js';
 import { writeFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
 
 console.log('🚀 Generating MCPayStream Devnet Keypair');
-console.log('==========================================');
+console.log('========================================');
 
 try {
   // Create Solana config directory
@@ -17,13 +17,9 @@ try {
   const keypair = Keypair.generate();
   const keypairPath = join(solanaConfigDir, 'mcpaystream.json');
   
-  // Save keypair to file
-  const keypairData = {
-    publicKey: keypair.publicKey.toString(),
-    secretKey: Array.from(keypair.secretKey)
-  };
-  
-  writeFileSync(keypairPath, JSON.stringify(keypairData, null, 2));
+  // Save keypair in Solana CLI compatible format (just the secret key array)
+  const secretKeyArray = Array.from(keypair.secretKey);
+  writeFileSync(keypairPath, JSON.stringify(secretKeyArray));
   
   console.log('✅ Keypair generated successfully!');
   console.log('');
@@ -40,6 +36,10 @@ try {
   console.log('   • Copy the address above to test in your frontend');
   console.log('   • Visit https://faucet.solana.com to get test SOL');
   console.log('   • Use the address in your MCPayStream dashboard');
+  console.log('');
+  console.log('🔧 Solana CLI Commands:');
+  console.log('   • Check balance: solana balance -k ~/.config/solana/mcpaystream.json');
+  console.log('   • Send SOL: solana transfer <RECIPIENT> 0.1 -k ~/.config/solana/mcpaystream.json');
   
 } catch (error) {
   console.error('❌ Error generating keypair:', error.message);
