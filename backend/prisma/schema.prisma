@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Creator {
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  solanaAddress  String        @unique
+  commissionRate Float         @default(0.3) // 30% default commission
+  totalEarnings  Float         @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  transactions   Transaction[]
+  
+  @@map("creators")
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  txHash          String   @unique
+  senderAddress   String
+  receiverAddress String
+  amountSOL       Float
+  usdValue        Float
+  status          TransactionStatus @default(PENDING)
+  timestamp       DateTime @default(now())
+  creatorId       String
+  creator         Creator  @relation(fields: [creatorId], references: [id])
+  
+  @@map("transactions")
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+
