@@ -10,7 +10,7 @@ let io;
 export function initializeSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: config.CORS_ORIGIN,
+      origin: "http://localhost:5173", // allow frontend port 5173
       methods: ['GET', 'POST'],
       credentials: true,
     },

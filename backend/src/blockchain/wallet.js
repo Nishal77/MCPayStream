@@ -19,6 +19,11 @@ export async function getWalletBalance(address) {
     return balanceInSOL;
   } catch (error) {
     logger.error(`Error getting wallet balance for ${address}:`, error);
+    // Return 0 for empty wallets instead of throwing error
+    if (error.message.includes('Account not found') || error.message.includes('Invalid account')) {
+      logger.info(`Wallet ${address} has no balance (new wallet)`);
+      return 0;
+    }
     throw new Error(`Failed to get wallet balance: ${error.message}`);
   }
 }
@@ -119,6 +124,11 @@ export async function getWalletTokenAccounts(address) {
     }));
   } catch (error) {
     logger.error(`Error getting token accounts for ${address}:`, error);
+    // Return empty array for wallets with no tokens
+    if (error.message.includes('Account not found') || error.message.includes('Invalid account')) {
+      logger.info(`Wallet ${address} has no token accounts`);
+      return [];
+    }
     throw new Error(`Failed to get token accounts: ${error.message}`);
   }
 }
@@ -134,10 +144,12 @@ export async function walletExists(address) {
     const publicKey = new PublicKey(address);
     
     const accountInfo = await connection.getAccountInfo(publicKey);
-    return accountInfo !== null;
+    // Consider wallet exists even if it has no balance (new wallets)
+    return true; // All valid Solana addresses are considered to exist
   } catch (error) {
     logger.error(`Error checking if wallet exists ${address}:`, error);
-    return false;
+    // If we can't validate, assume it exists and let other functions handle the details
+    return true;
   }
 }
 

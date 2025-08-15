@@ -15,7 +15,18 @@ const TransactionsTable = ({ transactions = [] }) => {
     }
   };
 
-  const sortedTransactions = [...transactions].sort((a, b) => {
+  // Normalize incoming payload keys from API (db + on-chain)
+  const normalized = transactions.map((t) => ({
+    signature: t.signature || t.txHash || t.id,
+    fromAddress: t.fromAddress || t.sender || t.senderAddress,
+    toAddress: t.toAddress || t.receiver || t.receiverAddress,
+    amount: typeof t.amount !== 'undefined' ? t.amount : (t.amountSOL || 0),
+    amountUSD: typeof t.amountUSD !== 'undefined' ? t.amountUSD : (t.usdValue || 0),
+    status: t.status || 'confirmed',
+    blockTime: t.blockTime || t.timestamp || t.time || null,
+  }));
+
+  const sortedTransactions = [...normalized].sort((a, b) => {
     let aValue = a[sortField];
     let bValue = b[sortField];
 
@@ -75,12 +86,12 @@ const TransactionsTable = ({ transactions = [] }) => {
   }
 
   return (
-    <div className="table-container">
-      <table className="table-primary">
-        <thead className="table-header">
+    <div className="overflow-x-auto rounded-lg border border-white/10">
+      <table className="min-w-full divide-y divide-white/10">
+        <thead className="bg-white/5">
           <tr>
             <th 
-              className="table-cell cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
               onClick={() => handleSort('blockTime')}
             >
               <div className="flex items-center">
@@ -89,7 +100,7 @@ const TransactionsTable = ({ transactions = [] }) => {
               </div>
             </th>
             <th 
-              className="table-cell cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
               onClick={() => handleSort('fromAddress')}
             >
               <div className="flex items-center">
@@ -98,7 +109,7 @@ const TransactionsTable = ({ transactions = [] }) => {
               </div>
             </th>
             <th 
-              className="table-cell cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
               onClick={() => handleSort('toAddress')}
             >
               <div className="flex items-center">
@@ -107,7 +118,7 @@ const TransactionsTable = ({ transactions = [] }) => {
               </div>
             </th>
             <th 
-              className="table-cell cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
               onClick={() => handleSort('amount')}
             >
               <div className="flex items-center">
@@ -116,7 +127,7 @@ const TransactionsTable = ({ transactions = [] }) => {
               </div>
             </th>
             <th 
-              className="table-cell cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="px-6 py-4 whitespace-nowrap text-sm text-white/80 cursor-pointer"
               onClick={() => handleSort('status')}
             >
               <div className="flex items-center">
@@ -124,71 +135,71 @@ const TransactionsTable = ({ transactions = [] }) => {
                 {getSortIcon('status')}
               </div>
             </th>
-            <th className="table-cell">Signature</th>
+            <th className="px-6 py-4 whitespace-nowrap text-sm text-white/80">Signature</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody className="divide-y divide-white/10">
           {sortedTransactions.map((transaction) => (
-            <tr key={transaction.signature} className="table-row">
-              <td className="table-cell">
+            <tr key={transaction.signature} className="bg-white/0">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                 <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  <div className="text-sm font-medium text-white">
                     {new Date(transaction.blockTime).toLocaleDateString()}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-white/60">
                     {formatRelativeTime(transaction.blockTime)}
                   </div>
                 </div>
               </td>
-              <td className="table-cell">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                  <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                     </svg>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="text-sm font-medium text-white">
                       {formatAddress(transaction.fromAddress)}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-white/60">
                       {transaction.fromAddress}
                     </div>
                   </div>
                 </div>
               </td>
-              <td className="table-cell">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 bg-solana-100 dark:bg-solana-900/20 rounded-full flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4 text-solana-600 dark:text-solana-400" fill="currentColor" viewBox="0 0 24 24">
+                  <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="text-sm font-medium text-white">
                       {formatAddress(transaction.toAddress)}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-white/60">
                       {transaction.toAddress}
                     </div>
                   </div>
                 </div>
               </td>
-              <td className="table-cell">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                 <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  <div className="text-sm font-medium text-white">
                     {formatSOL(transaction.amount)}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-white/60">
                     {formatUSD(transaction.amountUSD)}
                   </div>
                 </div>
               </td>
-              <td className="table-cell">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                 {getStatusBadge(transaction.status)}
               </td>
-              <td className="table-cell">
-                <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <div className="text-sm text-white/70 font-mono">
                   {formatAddress(transaction.signature, 8, 8)}
                 </div>
               </td>

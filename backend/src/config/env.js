@@ -21,6 +21,7 @@ const config = {
   SOLANA_RPC_URL: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
   SOLANA_WS_URL: process.env.SOLANA_WS_URL || 'wss://api.mainnet-beta.solana.com',
   SOLANA_WALLET_ADDRESS: process.env.SOLANA_WALLET_ADDRESS,
+  SOLANA_WALLET_KEYPAIR: process.env.SOLANA_WALLET_KEYPAIR, // optional path to keypair json for testing/devnet
   SOLANA_NETWORK: process.env.SOLANA_NETWORK || 'mainnet-beta',
   
   // CoinGecko API

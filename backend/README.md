@@ -41,12 +41,12 @@ npm install
 
 ### 2. Environment Configuration
 
-Create `env.development` file with your Supabase credentials:
+Create `.env` file with your Supabase credentials:
 
 ```env
 # Environment
 NODE_ENV=development
-PORT=5000
+PORT=5001
 
 # Supabase Database Connection
 DATABASE_URL="postgresql://postgres.oiaofdufyanysebbspky:[YOUR-PASSWORD]@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
@@ -57,6 +57,7 @@ SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
 SOLANA_WALLET_ADDRESS=9nGxKEUZkJAJAiaBZfvQVJPVvbpfndVjmPm5SBj5rHmr
 SOLANA_NETWORK=mainnet-beta
+SOLANA_WALLET_KEYPAIR=
 
 # CoinGecko API
 COINGECKO_API_URL=https://api.coingecko.com/api/v3
@@ -79,13 +80,38 @@ RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 
 # CORS
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:5173
 
 # Compression
 COMPRESSION_LEVEL=6
 ```
 
-### 3. Initialize Database
+### 3. Devnet Testing (Optional)
+
+1. Install Solana CLI
+```bash
+sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
+```
+
+2. Create a test keypair
+```bash
+solana-keygen new --outfile ~/.config/solana/mcpaystream.json
+```
+
+3. Switch to Devnet and airdrop
+```bash
+solana config set --url https://api.devnet.solana.com
+solana airdrop 2
+solana address
+```
+
+4. Update `.env` to use Devnet
+```
+SOLANA_NETWORK=https://api.devnet.solana.com
+SOLANA_WALLET_KEYPAIR=~/.config/solana/mcpaystream.json
+```
+
+### 4. Initialize Database
 
 ```bash
 # Run the initialization script
@@ -97,7 +123,7 @@ npx prisma migrate dev --name init
 npm run db:seed
 ```
 
-### 4. Start Development Server
+### 5. Start Development Server
 
 ```bash
 npm run dev

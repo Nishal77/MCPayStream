@@ -15,7 +15,14 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset",
-    "db:seed": "node src/scripts/initCreator.js"
+    "db:seed": "node src/scripts/initCreator.js",
+    "test:devnet:keypair": "node ./test/generate-keypair.mjs",
+    "test:devnet:install": "./test/devnet-cli.sh install",
+    "test:devnet:use": "./test/devnet-cli.sh use",
+    "test:devnet:airdrop": "node ./test/airdrop.mjs",
+    "test:devnet:send": "node ./test/send.mjs",
+    "test:devnet:address": "node -e \"import('node:fs');import('node:path');import('node:os');import {Keypair} from '@solana/web3.js';const fs=require('fs');const os=require('os');const path=require('path');const p=(process.env.SOLANA_WALLET_KEYPAIR||path.join(os.homedir(),'.config/solana/mcpaystream.json')).replace(/^~\//,os.homedir()+'/');const s=JSON.parse(fs.readFileSync(p,'utf8'));const kp=Keypair.fromSecretKey(new Uint8Array(s));console.log(kp.publicKey.toBase58());\"",
+    "test:devnet:balance": "node -e \"import{Connection,PublicKey,LAMPORTS_PER_SOL}from'@solana/web3.js';(async()=>{const a=process.argv[1];const c=new Connection(process.env.SOLANA_NETWORK||'https://api.devnet.solana.com','confirmed');const bal=await c.getBalance(new PublicKey(a));console.log((bal/LAMPORTS_PER_SOL).toFixed(4)+' SOL')})().catch(e=>{console.error(e.message);process.exit(1)})\""
   },
   "keywords": [
     "solana",

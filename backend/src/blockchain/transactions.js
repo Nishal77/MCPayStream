@@ -141,14 +141,12 @@ export function parsePaymentTransaction(transaction, targetAddress) {
       return null; // Not a transfer to our address
     }
     
-    // Calculate SOL amount transferred
+    // Calculate SOL amount delta for the target (positive=incoming, negative=outgoing)
     const preBalance = preBalances[targetIndex] || 0;
     const postBalance = postBalances[targetIndex] || 0;
-    const solAmount = (postBalance - preBalance) / LAMPORTS_PER_SOL;
-    
-    if (solAmount <= 0) {
-      return null; // No SOL received
-    }
+    const deltaLamports = postBalance - preBalance;
+    const solAmount = Math.abs(deltaLamports) / LAMPORTS_PER_SOL;
+    if (solAmount === 0) return null; // skip no-op
     
     // Find sender (account that lost SOL)
     let senderIndex = -1;
@@ -171,6 +169,7 @@ export function parsePaymentTransaction(transaction, targetAddress) {
       sender: senderAddress,
       receiver: targetAddress,
       amountSOL: solAmount,
+      direction: deltaLamports > 0 ? 'IN' : 'OUT',
       fee,
       blockTime: transaction.blockTime,
       slot: transaction.slot,

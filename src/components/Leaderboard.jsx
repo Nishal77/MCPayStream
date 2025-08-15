@@ -84,9 +84,9 @@ const Leaderboard = ({ walletAddress }) => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="bg-white/5 rounded-lg border border-white/10">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-6 border-b border-white/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
@@ -106,7 +106,7 @@ const Leaderboard = ({ walletAddress }) => {
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 text-sm border border-white/10 rounded-lg bg-black text-white"
             >
               <option value="24h">24 Hours</option>
               <option value="7d">7 Days</option>
@@ -118,13 +118,13 @@ const Leaderboard = ({ walletAddress }) => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
+      <div className="flex border-b border-white/10">
         <button
           onClick={() => setActiveTab('senders')}
-          className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 px-6 py-3 text-sm font-medium ${
             activeTab === 'senders'
-              ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'text-white border-b-2 border-white'
+              : 'text-white/60'
           }`}
         >
           <div className="flex items-center justify-center space-x-2">
@@ -134,10 +134,10 @@ const Leaderboard = ({ walletAddress }) => {
         </button>
         <button
           onClick={() => setActiveTab('wallets')}
-          className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 px-6 py-3 text-sm font-medium ${
             activeTab === 'wallets'
-              ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'text-white border-b-2 border-white'
+              : 'text-white/60'
           }`}
         >
           <div className="flex items-center justify-center space-x-2">
@@ -154,7 +154,7 @@ const Leaderboard = ({ walletAddress }) => {
             {topSenders.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-white/70">
                   No senders found for this period
                 </p>
               </div>
@@ -162,9 +162,9 @@ const Leaderboard = ({ walletAddress }) => {
               topSenders.map((sender, index) => (
                 <div
                   key={sender.address}
-                  className={`flex items-center p-4 rounded-lg border transition-all hover:shadow-md ${
+                  className={`flex items-center p-4 rounded-lg border ${
                     getRankColor(index + 1)
-                  } ${index < 3 ? 'border-transparent' : 'border-gray-200 dark:border-gray-700'}`}
+                  } ${index < 3 ? 'border-transparent' : 'border-white/10'}`}
                 >
                   <div className="flex items-center justify-center w-8 h-8 mr-4">
                     {getRankIcon(index + 1)}
@@ -173,19 +173,19 @@ const Leaderboard = ({ walletAddress }) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        <p className="text-sm font-medium text-white">
                           {formatAddress(sender.address)}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-white/70">
                           {sender.transactionCount} transaction{sender.transactionCount !== 1 ? 's' : ''}
                         </p>
                       </div>
                       
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <p className="text-sm font-semibold text-white">
                           {formatSOL(sender.totalSentSOL)}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-white/70">
                           {formatUSD(sender.totalSentUSD)}
                         </p>
                       </div>
@@ -200,7 +200,7 @@ const Leaderboard = ({ walletAddress }) => {
             {topWallets.length === 0 ? (
               <div className="text-center py-8">
                 <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-white/70">
                   No wallet data available for this period
                 </p>
               </div>
@@ -208,9 +208,9 @@ const Leaderboard = ({ walletAddress }) => {
               topWallets.map((wallet, index) => (
                 <div
                   key={wallet.address}
-                  className={`flex items-center p-4 rounded-lg border transition-all hover:shadow-md ${
+                  className={`flex items-center p-4 rounded-lg border ${
                     getRankColor(index + 1)
-                  } ${index < 3 ? 'border-transparent' : 'border-gray-200 dark:border-gray-700'}`}
+                  } ${index < 3 ? 'border-transparent' : 'border-white/10'}`}
                 >
                   <div className="flex items-center justify-center w-8 h-8 mr-4">
                     {getRankIcon(index + 1)}
@@ -219,19 +219,19 @@ const Leaderboard = ({ walletAddress }) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        <p className="text-sm font-medium text-white">
                           {wallet.name || formatAddress(wallet.address)}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-white/70">
                           {formatAddress(wallet.address)}
                         </p>
                       </div>
                       
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <p className="text-sm font-semibold text-white">
                           {formatSOL(wallet.totalReceivedSOL || wallet.balance)}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-white/70">
                           {formatUSD(wallet.totalReceivedUSD || (wallet.balance * (wallet.lastSolPrice || 0)))}
                         </p>
                       </div>
@@ -245,8 +245,8 @@ const Leaderboard = ({ walletAddress }) => {
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+      <div className="px-6 py-4 bg-white/5 border-t border-white/10">
+        <div className="flex items-center justify-between text-sm text-white/70">
           <span>
             Showing top {activeTab === 'senders' ? topSenders.length : topWallets.length} performers
           </span>

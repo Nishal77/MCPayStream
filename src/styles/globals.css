@@ -115,27 +115,20 @@ body {
   background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
 }
 
-/* Card hover effects */
-.card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
+/* Remove card hover effects globally for a clean, static look */
+.card-hover {}
 
 /* Button styles */
 .btn-primary {
-  @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  @apply bg-white text-black font-medium py-2 px-4 rounded-lg;
 }
 
 .btn-secondary {
-  @apply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  @apply bg-white/10 text-white font-medium py-2 px-4 rounded-lg border border-white/10;
 }
 
 .btn-solana {
-  @apply bg-solana-500 hover:bg-solana-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  @apply bg-white text-black font-medium py-2 px-4 rounded-lg;
 }
 
 /* Input styles */
@@ -157,7 +150,7 @@ body {
 }
 
 .table-row {
-  @apply bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200;
+  @apply bg-transparent;
 }
 
 .table-cell {

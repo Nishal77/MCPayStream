@@ -147,7 +147,7 @@ const EarningsChart = ({ walletAddress }) => {
     <div>
       {/* Time Range Selector */}
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold">
           Earnings Over Time
         </h3>
         <div className="flex space-x-2">
@@ -155,10 +155,10 @@ const EarningsChart = ({ walletAddress }) => {
             <button
               key={value}
               onClick={() => setTimeRange(value)}
-              className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors duration-200 ${
+              className={`px-3 py-1 text-sm font-medium rounded-lg ${
                 timeRange === value
-                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/60'
               }`}
             >
               {label}
@@ -182,7 +182,7 @@ const EarningsChart = ({ walletAddress }) => {
               </linearGradient>
             </defs>
             
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
             
             <XAxis 
               dataKey="date" 

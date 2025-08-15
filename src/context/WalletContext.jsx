@@ -108,82 +108,36 @@ export const WalletProvider = ({ children }) => {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/wallets/${address}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch wallet data');
+        const errorData = await response.json().catch(() => ({}));
+        const message = errorData?.error?.message || errorData?.message || 'Failed to fetch wallet data';
+        throw new Error(message);
       }
       
       const walletData = await response.json();
-      
-      // Add demo data to make the dashboard more engaging
-      const enhancedWalletData = {
-        ...walletData.message,
-        stats: {
-          ...walletData.message.stats,
-          totalReceived: walletData.message.stats.totalReceived || 7.5, // Demo value
-          totalReceivedUSD: walletData.message.stats.totalReceivedUSD || 1481.93, // Demo value
-          transactionCount: walletData.message.stats.transactionCount || 3, // Demo value
-          // Add some demo stats for better visualization
-          demoMode: true
-        }
+      const liveData = walletData.data || walletData.message || walletData; // support both shapes
+      // Normalize to always have .address for UI logic and sockets
+      const normalized = {
+        ...liveData,
+        address: liveData.address || liveData.solanaAddress,
       };
       
-      setWallet(enhancedWalletData);
-      setBalance(enhancedWalletData.balance || 7.5); // Demo balance
-      setBalanceUSD(enhancedWalletData.balanceUSD || 1481.93); // Demo balance USD
-      setSolPrice(enhancedWalletData.currentSolPrice || 197.59);
+      // Use real live data from blockchain
+      setWallet(normalized);
+      setBalance(normalized.balance || 0);
+      setBalanceUSD(normalized.balanceUSD || 0);
+      setSolPrice(normalized.currentSolPrice || 0);
       
-      // Generate some demo transactions for better UX
-      if (enhancedWalletData.stats.transactionCount === 0) {
-        generateDemoTransactions();
-      }
+      console.log('Live wallet data loaded:', normalized);
       
     } catch (error) {
       console.error('Error fetching wallet:', error);
-      setError('Failed to fetch wallet data. Please check the address and try again.');
+      setError(error.message || 'Failed to fetch wallet data. Please check the address and try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Generate demo transactions for better UX
-  const generateDemoTransactions = () => {
-    const demoTransactions = [
-      {
-        id: 'demo-1',
-        txHash: 'demo_transaction_hash_1',
-        senderAddress: 'demo_sender_1',
-        receiverAddress: wallet?.address || 'demo_receiver',
-        amountSOL: 2.5,
-        usdValue: 493.98,
-        status: 'CONFIRMED',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-        creatorId: wallet?.id || 'demo_creator'
-      },
-      {
-        id: 'demo-2',
-        txHash: 'demo_transaction_hash_2',
-        senderAddress: 'demo_sender_2',
-        receiverAddress: wallet?.address || 'demo_receiver',
-        amountSOL: 1.8,
-        usdValue: 355.66,
-        status: 'CONFIRMED',
-        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-        creatorId: wallet?.id || 'demo_creator'
-      },
-      {
-        id: 'demo-3',
-        txHash: 'demo_transaction_hash_3',
-        senderAddress: 'demo_sender_3',
-        receiverAddress: wallet?.address || 'demo_receiver',
-        amountSOL: 3.2,
-        usdValue: 632.29,
-        status: 'CONFIRMED',
-        timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-        creatorId: wallet?.id || 'demo_creator'
-      }
-    ];
-    
-    setTransactions(demoTransactions);
-  };
+
 
   // Fetch transactions
   const fetchTransactions = async (limit = 50, offset = 0) => {
@@ -191,7 +145,7 @@ export const WalletProvider = ({ children }) => {
     
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/transactions/creator/${wallet.address}?limit=${limit}&offset=${offset}`
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/transactions/creator/${wallet.address}?limit=${limit}&offset=${offset}&includeOnChain=true&onChainLimit=${limit}`
       );
       
       if (!response.ok) {
@@ -199,7 +153,8 @@ export const WalletProvider = ({ children }) => {
       }
       
       const data = await response.json();
-      setTransactions(data.transactions || []);
+      const payload = data.data || data.message || data;
+      setTransactions(payload.transactions || []);
       
     } catch (err) {
       console.error('Error fetching transactions:', err);

@@ -14,7 +14,9 @@ import { getCreatorBySolanaAddress } from '../models/creator.js';
 import { exportTransactionsToCSV, exportTransactionsToJSON } from '../services/exportService.js';
 import { sendPaymentWebhook } from '../services/webhookService.js';
 import logger from '../utils/logger.js';
-import { formatApiResponse, formatApiError, formatPagination } from '../utils/format.js';
+import { formatApiResponse, formatApiError } from '../utils/format.js';
+import { getRecentTransactions as getOnChainRecent } from '../blockchain/transactions.js';
+import { getCachedSolPrice } from '../blockchain/price.js';
 
 /**
  * Get transactions for a creator
@@ -27,7 +29,7 @@ export const getCreatorTransactions = async (req, res) => {
     }
 
     const { address } = req.params;
-    const { page = 1, limit = 20, status, orderBy = 'desc' } = req.query;
+    const { page = 1, limit = 20, status, orderBy = 'desc', includeOnChain = 'true', onChainLimit } = req.query;
 
     const creator = await getCreatorBySolanaAddress(address);
     if (!creator) {
@@ -41,10 +43,52 @@ export const getCreatorTransactions = async (req, res) => {
       orderBy,
     });
 
-    res.json(formatApiResponse('Transactions retrieved successfully', {
-      transactions: result.transactions,
-      pagination: formatPagination(result.pagination),
+    // Normalize DB transactions to UI-friendly shape
+    const dbNormalized = result.transactions.map((tx) => ({
+      id: tx.id,
+      signature: tx.txHash,
+      fromAddress: tx.senderAddress,
+      toAddress: tx.receiverAddress,
+      amount: tx.amountSOL,
+      amountUSD: tx.usdValue,
+      status: (tx.status || 'CONFIRMED').toLowerCase(),
+      blockTime: tx.timestamp ? new Date(tx.timestamp).getTime() : undefined,
+      source: 'db',
     }));
+
+    let merged = [...dbNormalized];
+
+    if (includeOnChain === 'true') {
+      const fetchLimit = parseInt(onChainLimit || limit);
+      const [chainTxs, solPrice] = await Promise.all([
+        getOnChainRecent(address, fetchLimit),
+        getCachedSolPrice(),
+      ]);
+
+      const chainNormalized = chainTxs.map((t) => ({
+        id: `onchain-${t.signature}`,
+        signature: t.signature,
+        fromAddress: t.sender,
+        toAddress: t.receiver,
+        amount: t.amountSOL,
+        amountUSD: t.amountSOL * (solPrice || 0),
+        status: 'confirmed',
+        blockTime: t.blockTime ? t.blockTime * 1000 : undefined,
+        source: 'onchain',
+      }));
+
+      // Deduplicate by signature/txHash
+      const existingSignatures = new Set(dbNormalized.map((x) => x.signature).filter(Boolean));
+      const uniqueChain = chainNormalized.filter((x) => !existingSignatures.has(x.signature));
+      merged = [...uniqueChain, ...dbNormalized];
+      // Sort by blockTime desc when available
+      merged.sort((a, b) => (b.blockTime || 0) - (a.blockTime || 0));
+    }
+
+    res.json(formatApiResponse({
+      transactions: merged,
+      pagination: result.pagination,
+    }, 'Transactions retrieved successfully'));
   } catch (error) {
     logger.error('Error getting creator transactions:', error);
     res.status(500).json(formatApiError('Failed to get transactions', error.message));
@@ -63,7 +107,7 @@ export const getTransaction = async (req, res) => {
       return res.status(404).json(formatApiError('Transaction not found'));
     }
 
-    res.json(formatApiResponse('Transaction retrieved successfully', transaction));
+    res.json(formatApiResponse(transaction, 'Transaction retrieved successfully'));
   } catch (error) {
     logger.error('Error getting transaction:', error);
     res.status(500).json(formatApiError('Failed to get transaction', error.message));
@@ -82,7 +126,7 @@ export const getTransactionByHashController = async (req, res) => {
       return res.status(404).json(formatApiError('Transaction not found'));
     }
 
-    res.json(formatApiResponse('Transaction retrieved successfully', transaction));
+    res.json(formatApiResponse(transaction, 'Transaction retrieved successfully'));
   } catch (error) {
     logger.error('Error getting transaction by hash:', error);
     res.status(500).json(formatApiError('Failed to get transaction', error.message));
@@ -103,14 +147,14 @@ export const getTransactionStatsController = async (req, res) => {
 
     const stats = await getTransactionStats(creator.id);
 
-    res.json(formatApiResponse('Transaction statistics retrieved successfully', {
+    res.json(formatApiResponse({
       creator: {
         id: creator.id,
         name: creator.name,
         solanaAddress: creator.solanaAddress,
       },
       stats,
-    }));
+    }, 'Transaction statistics retrieved successfully'));
   } catch (error) {
     logger.error('Error getting transaction statistics:', error);
     res.status(500).json(formatApiError('Failed to get transaction statistics', error.message));
@@ -199,7 +243,7 @@ export const getRecentTransactionsController = async (req, res) => {
 
     const transactions = await getRecentTransactions(parseInt(limit));
 
-    res.json(formatApiResponse('Recent transactions retrieved successfully', { transactions }));
+    res.json(formatApiResponse({ transactions }, 'Recent transactions retrieved successfully'));
   } catch (error) {
     logger.error('Error getting recent transactions:', error);
     res.status(500).json(formatApiError('Failed to get recent transactions', error.message));
@@ -220,10 +264,10 @@ export const getTransactionsByAddressController = async (req, res) => {
       orderBy,
     });
 
-    res.json(formatApiResponse('Transactions retrieved successfully', {
+    res.json(formatApiResponse({
       transactions: result.transactions,
       pagination: formatPagination(result.pagination),
-    }));
+    }, 'Transactions retrieved successfully'));
   } catch (error) {
     logger.error('Error getting transactions by address:', error);
     res.status(500).json(formatApiError('Failed to get transactions', error.message));

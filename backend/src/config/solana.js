@@ -1,4 +1,5 @@
-import { Connection, clusterApiUrl } from '@solana/web3.js';
+import { Connection, clusterApiUrl, Keypair } from '@solana/web3.js';
+import fs from 'fs';
 import config from './env.js';
 import logger from '../utils/logger.js';
 
@@ -8,24 +9,30 @@ class SolanaConfig {
     this.wsConnection = null;
     this.network = 'mainnet-beta';
     this.commitment = 'confirmed';
+    this.keypair = null;
   }
 
   // Initialize Solana connection
   async initialize() {
     try {
+      // Resolve network: allow full URL in SOLANA_NETWORK or fallback to RPC URL
+      const rpcUrl = resolveRpcUrl();
+
       // Create HTTP connection
-      this.connection = new Connection(
-        config.SOLANA_RPC_URL,
-        this.commitment
-      );
+      this.connection = new Connection(rpcUrl, this.commitment);
 
       // Test connection
       const version = await this.connection.getVersion();
       logger.info(`Solana connection established. Version: ${version['solana-core']}`);
 
-      // Note: WebSocket connections are handled differently in Solana Web3.js
-      // For now, we'll use the HTTP connection for all operations
-      logger.info('Solana HTTP connection established (WebSocket not configured)');
+      // Load optional keypair for testing/devnet if provided
+      if (config.SOLANA_WALLET_KEYPAIR && fs.existsSync(expandHome(config.SOLANA_WALLET_KEYPAIR))) {
+        const secret = JSON.parse(fs.readFileSync(expandHome(config.SOLANA_WALLET_KEYPAIR), 'utf8'));
+        this.keypair = Keypair.fromSecretKey(new Uint8Array(secret));
+        logger.info('Solana keypair loaded from SOLANA_WALLET_KEYPAIR');
+      }
+
+      logger.info('Solana HTTP connection established');
 
       return true;
     } catch (error) {
@@ -106,3 +113,21 @@ const solanaConfig = new SolanaConfig();
 export const initializeSolana = () => solanaConfig.initialize();
 
 export default solanaConfig;
+
+// Helpers
+function resolveRpcUrl() {
+  // If SOLANA_NETWORK is a full URL, use it; else if it's a cluster alias, map to cluster URL
+  const network = config.SOLANA_NETWORK;
+  if (network?.startsWith('http')) return network;
+  if (['devnet', 'testnet', 'mainnet-beta'].includes(network)) return clusterApiUrl(network);
+  // Fallback to explicit RPC URL
+  return config.SOLANA_RPC_URL;
+}
+
+function expandHome(filePath) {
+  if (!filePath) return filePath;
+  if (filePath.startsWith('~/')) {
+    return filePath.replace('~', process.env.HOME || process.env.USERPROFILE);
+  }
+  return filePath;
+}
